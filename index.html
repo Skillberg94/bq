@@ -36,11 +36,35 @@
   .ignore { background: #3a2a10; border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
   pre { white-space: pre-wrap; font-size: 12px; background: #181d27; padding: 8px; border-radius: 6px; }
   table { border-collapse: collapse; font-size: 14px; } td { padding: 2px 10px 2px 0; }
+  .solde { font-size: 22px; font-weight: 600; }
+  .op { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid #2a3140; }
+  .op .lib { font-size: 14px; } .op .date { color: #98a2b3; font-size: 12px; }
+  .op .mt { white-space: nowrap; font-weight: 600; } .moins { color: #ff8a8a; } .plus { color: #6ee7a0; }
+  .tag { font-size: 11px; color: #98a2b3; border: 1px solid #343c4d; border-radius: 4px; padding: 0 4px; margin-left: 4px; }
+  details { margin-top: 10px; }
 </style>
 </head>
 <body>
 <h1>BQ — test</h1>
 <p class="petit">Page de test : aucune donnée n'est envoyée nulle part. Les réglages restent dans ce téléphone.</p>
+
+<h2>0. Mes comptes</h2>
+<table>
+  <tr><td class="petit">Banque</td><td id="solde-banque" class="solde">…</td></tr>
+  <tr><td class="petit">Espèces</td><td id="solde-especes" class="solde">…</td></tr>
+</table>
+<div id="synchro" class="info"></div>
+<p><button id="synchro-maintenant" class="second">Synchroniser maintenant</button></p>
+<div id="a-classer" class="petit"></div>
+<div id="operations"></div>
+<details>
+  <summary class="petit">Solde de départ (à saisir une fois, modifiable)</summary>
+  <p class="petit">Les alertes arrivées avant ce moment restent affichées mais ne changent pas le solde.</p>
+  <input id="depart-banque" inputmode="decimal" placeholder="Banque, par exemple 107,19">
+  <input id="depart-especes" inputmode="decimal" placeholder="Espèces, par exemple 20" style="margin-top:8px">
+  <p><button id="depart-ok">Enregistrer</button></p>
+  <div id="depart-message"></div>
+</details>
 
 <h2>1. Ce téléphone</h2>
 <table id="etat"></table>

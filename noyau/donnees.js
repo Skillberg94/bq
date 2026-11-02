@@ -30,6 +30,7 @@ export function vide() {
     version: 1, reference: {}, operations: [], ajouts: {},
     categories: categoriesParDefaut(), emetteurs: {}, recurrents: [], seuils: { moisCentimes: null },
     regles: REGLES_DEPART.map((r) => ({ ...r })),
+    synchro: { dernierTs: 0, ignores: [], derniere: null },
   };
 }
 
@@ -133,7 +134,8 @@ export function lister(etat, { avecSupprimees = false } = {}) {
       const categorie = categorieDe(etat, brute);
       return {
         ...op, ...a, supprime: !!a.supprime, retrait: estRetrait(etat, brute), corrigee: !!corrige,
-        categorie, aClasser: op.sens === 'sortie' && !categorie, recurrentId: recurrentDe(etat, brute),
+        // Un retrait n'est pas une dépense : pas besoin de catégorie.
+        categorie, aClasser: op.sens === 'sortie' && !categorie && !estRetrait(etat, brute), recurrentId: recurrentDe(etat, brute),
         comptee: compteDansSolde(etat, brute), alimenteEspeces: retraitCompte(etat, brute),
       };
     })

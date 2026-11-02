@@ -3,7 +3,7 @@
 // Règle : la catégorie d'une ligne = celle choisie sur la ligne, sinon celle retenue pour son libellé.
 // Classer un émetteur reclasse donc aussi ses anciennes lignes (sauf celles où une catégorie a été choisie à la main).
 
-import { effective } from './soldes.js';
+import { effective, estRetrait } from './soldes.js';
 import { normaliserLibelle } from './libelles.js';
 import { recurrentDe } from './recurrents.js';
 
@@ -89,7 +89,7 @@ export function aClasser(etat) {
   const groupes = new Map();
   for (const brute of etat.operations) {
     const op = effective(etat, brute);
-    if (op.sens !== 'sortie' || etat.ajouts[op.id]?.supprime || categorieDe(etat, brute)) continue;
+    if (op.sens !== 'sortie' || etat.ajouts[op.id]?.supprime || categorieDe(etat, brute) || estRetrait(etat, brute)) continue;
     const cle = normaliserLibelle(op.libelle);
     const g = groupes.get(cle) ?? { libelle: op.libelle, lignes: 0, centimes: 0 };
     g.lignes += 1;
