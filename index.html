@@ -46,11 +46,13 @@
   .badge { font-size: 11px; color: #98a2b3; border: 1px solid #343c4d; border-radius: 4px; padding: 1px 5px; margin-left: 4px; }
   label { display: block; font-size: 13px; color: #98a2b3; }
   .champs { display: grid; grid-template-columns: 2fr 3fr; gap: 10px; }
-  input:not([type=checkbox]):not([type=file]), select { font-size: 16px; width: 100%; margin-top: 4px; padding: 10px; border-radius: 8px;
+  /* Les styles de la page ne s'appliquent JAMAIS dans la zone du lecteur Tool Design (#lecteur-zone) : le moteur y pose
+     ses propres boutons et cases HTML transparents, que ces styles recouvriraient. */
+  input:not([type=checkbox]):not([type=file]):not(#lecteur-zone *), select:not(#lecteur-zone *) { font-size: 16px; width: 100%; margin-top: 4px; padding: 10px; border-radius: 8px;
     border: 1px solid #343c4d; background: #181d27; color: #eee; }
   .case { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; }
-  button { font-size: 15px; padding: 10px 14px; border-radius: 10px; border: 0; background: #2a6df4; color: #fff; margin: 4px 6px 4px 0; cursor: pointer; }
-  .menu button, #verrou button { background: #343c4d; }
+  button:not(#lecteur-zone *) { font-size: 15px; padding: 10px 14px; border-radius: 10px; border: 0; background: #2a6df4; color: #fff; margin: 4px 6px 4px 0; cursor: pointer; }
+  .menu button:not(#lecteur-zone *), #verrou button { background: #343c4d; }
   .tete-seuil { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .tete-seuil select { width: auto; margin: 0; padding: 6px 8px; font-size: 14px; }
   .jauge { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; }
@@ -172,6 +174,13 @@
       <div id="resto-message" class="info"></div>
       <p id="resto-annuler-bloc" hidden><button id="resto-annuler">Revenir aux données d'avant la dernière restauration</button></p>
     </details>
+
+    <h3>Lecteur Tool Design (test)</h3>
+    <p class="petit">Affiche un petit écran de test dessiné par le moteur Tool Design (environ 10 Mo à charger la première fois).</p>
+    <p><button id="lecteur-afficher">Afficher l'écran de test</button></p>
+    <label class="petit">Jauge envoyée par l'app : <input id="lecteur-jauge" type="range" min="0" max="100" value="40"></label>
+    <div id="lecteur-message" class="info"></div>
+    <div id="lecteur-zone" style="height:440px;border-radius:12px;overflow:hidden;margin-top:8px" hidden></div>
 
     <details>
       <summary class="petit">Outils de test</summary>

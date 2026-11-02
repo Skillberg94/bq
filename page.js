@@ -274,6 +274,37 @@ $('pont-lire').onclick = async () => {
   }
 };
 
+// ---- Lecteur Tool Design (brique 13, test de l'enveloppe) : chargé seulement quand on le demande.
+let vueLecteur = null;
+function chargerLecteur() {
+  if (window.BQLecteurPret) return window.BQLecteurPret;
+  return new Promise((ok, ko) => {
+    window.BQ_LECTEUR_BASE = 'lecteur/';
+    const script = document.createElement('script');
+    script.src = 'lecteur/lecteur.js';
+    script.onload = () => window.BQLecteurPret.then(ok, ko);
+    script.onerror = () => ko(new Error('lecteur introuvable'));
+    document.head.append(script);
+  });
+}
+$('lecteur-afficher').onclick = async () => {
+  try {
+    dit('lecteur-message', 'Chargement du lecteur…');
+    const [lecteur, design] = await Promise.all([chargerLecteur(), fetch('lecteur/ecran-test.design.json').then((r) => r.json())]);
+    $('lecteur-zone').hidden = false;
+    if (vueLecteur) vueLecteur.demonter();
+    vueLecteur = lecteur.monter($('lecteur-zone'), {
+      design,
+      gaugeValues: { 'jauge-test': Number($('lecteur-jauge').value) },
+      onAction: (action) => dit('lecteur-message', 'Action reçue du design : ' + action, 'ok'),
+    });
+    dit('lecteur-message', 'Écran affiché par le lecteur. Touche le bouton bleu ou bouge le curseur.', 'ok');
+  } catch (e) {
+    dit('lecteur-message', 'Lecteur : ' + e.message, 'ko');
+  }
+};
+$('lecteur-jauge').oninput = () => vueLecteur?.mettreAJour({ gaugeValues: { 'jauge-test': Number($('lecteur-jauge').value) } });
+
 // ---- 0. Mes comptes : vraies données, chiffrées dans ce téléphone, synchro automatique par le pont
 function lireMessage(d) {
   const h = Object.fromEntries(d.payload.headers.map((x) => [x.name, x.value]));
