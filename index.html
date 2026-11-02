@@ -48,6 +48,16 @@
 <h1>BQ — test</h1>
 <p class="petit">Page de test : aucune donnée n'est envoyée nulle part. Les réglages restent dans ce téléphone.</p>
 
+<div id="verrou" hidden>
+  <h2 id="verrou-titre">Mot de passe</h2>
+  <p id="verrou-explication" class="petit"></p>
+  <input id="mdp" type="password" autocomplete="current-password" placeholder="mot de passe (10 caractères minimum)">
+  <input id="mdp2" type="password" autocomplete="new-password" placeholder="le même, une deuxième fois" style="margin-top:8px" hidden>
+  <p><button id="mdp-ok">Valider</button></p>
+  <div id="verrou-message" class="info"></div>
+</div>
+
+<div id="app" hidden>
 <h2>0. Mes comptes</h2>
 <table>
   <tr><td class="petit">Banque</td><td id="solde-banque" class="solde">…</td></tr>
@@ -99,6 +109,14 @@
   <button id="csv-telecharger" class="second">CSV : télécharger</button>
 </p>
 <div id="export" class="info"></div>
+
+<!-- Emplacement provisoire : l'endroit définitif sera choisi avec les vrais écrans (pas en accès direct sur l'accueil). -->
+<details>
+  <summary class="petit">Réglages avancés</summary>
+  <p class="petit">« Verrouiller » efface la clé de ce téléphone : le mot de passe sera redemandé à la prochaine ouverture. Tes données restent chiffrées dans le téléphone.</p>
+  <p><button id="verrouiller" class="second">Verrouiller maintenant</button></p>
+</details>
+</div>
 
 <script src="config.js"></script>
 <script src="extraction.js"></script>

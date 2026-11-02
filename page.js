@@ -3,7 +3,9 @@ import { tableaux } from './noyau/tableaux.js';
 import { enCsv } from './noyau/csv.js';
 import { feuillesXlsx } from './noyau/xlsx.js';
 import { etatDeTest } from './donnees-test.js';
-import { charger, sauver, definirReference, soldes, lister } from './noyau/donnees.js';
+import { charger, definirReference, soldes, lister, CLE_STOCKAGE } from './noyau/donnees.js';
+import { coffreExiste, lireEntete, ouvrirCoffre, lireCoffre, ecrireCoffre, installerCoffre, verifierMotDePasse } from './noyau/coffre.js';
+import { lireCle, rangerCle, effacerCle } from './porte-cles.js';
 import { synchroniser, apresTsPour, LIMITE } from './noyau/synchro.js';
 import { enCentimes, enEuros } from './noyau/montants.js';
 import { aClasser } from './noyau/categories.js';
@@ -111,17 +113,86 @@ $('connexion').onclick = () => {
   client.requestAccessToken();
 };
 
-// ---- 3 bis. Pont Apps Script (sans connexion Google : l'adresse et la clé restent dans ce téléphone)
-$('pont-url').value = lireLocal('bq-pont-url') || '';
-$('pont-cle').value = lireLocal('bq-pont-cle') || '';
+// ---- Coffre : toutes les vraies données (opérations, soldes, adresse et clé du pont) sont chiffrées dans le téléphone.
+const stockage = {
+  getItem: (cle) => lireLocal(cle),
+  setItem: (cle, valeur) => { if (!ecrireLocal(cle, valeur)) throw new Error('mémoire du téléphone indisponible'); },
+  removeItem: (cle) => { try { localStorage.removeItem(cle); } catch { /* rien */ } },
+};
+let cleDonnees = null;
+let contenu = null; // { etat, pont: { url, cle } }
+const enregistrer = () => ecrireCoffre(stockage, cleDonnees, contenu).catch((e) => dit('synchro', 'Enregistrement impossible : ' + e.message, 'ko'));
+
+// Écran du mot de passe : création (première fois) ou ouverture (clé absente du téléphone). Rend la clé de données.
+function demanderMotDePasse(creation) {
+  $('verrou').hidden = false;
+  $('mdp2').hidden = !creation;
+  $('mdp').autocomplete = creation ? 'new-password' : 'current-password';
+  $('verrou-titre').textContent = creation ? 'Crée ton mot de passe' : 'Saisis ton mot de passe';
+  $('verrou-explication').textContent = creation
+    ? 'Il chiffre tes données dans ce téléphone et, plus tard, tes designs. Tu ne le saisis qu\'une fois : ensuite l\'app s\'ouvre directement. Oublié et clé perdue = données chiffrées perdues : choisis-en un dont tu te souviendras.'
+    : 'La clé n\'est plus dans ce téléphone (verrouillage, ou données du site effacées).';
+  return new Promise((resoudre) => {
+    $('mdp-ok').onclick = async () => {
+      const mdp = $('mdp').value;
+      try {
+        verifierMotDePasse(mdp, creation ? $('mdp2').value : undefined);
+        dit('verrou-message', creation ? 'Chiffrement de tes données…' : 'Vérification…');
+        $('mdp-ok').disabled = true;
+        let cle;
+        if (creation) {
+          const ancien = charger(stockage);
+          const actuel = { etat: ancien.etat, pont: { url: lireLocal('bq-pont-url') || '', cle: lireLocal('bq-pont-cle') || '' } };
+          // Des données en clair abîmées ne sont jamais effacées.
+          const aEffacer = ['bq-pont-url', 'bq-pont-cle', ...(ancien.corrompu ? [] : [CLE_STOCKAGE])];
+          cle = await installerCoffre(stockage, mdp, actuel, aEffacer);
+        } else {
+          cle = await ouvrirCoffre(mdp, lireEntete(stockage));
+        }
+        $('mdp').value = '';
+        $('mdp2').value = '';
+        $('verrou').hidden = true;
+        resoudre(cle);
+      } catch (e) {
+        dit('verrou-message', e.message, 'ko');
+      } finally {
+        $('mdp-ok').disabled = false;
+      }
+    };
+  });
+}
+
+async function ouvrirApp() {
+  if (!coffreExiste(stockage)) {
+    cleDonnees = await demanderMotDePasse(true);
+  } else {
+    cleDonnees = await lireCle();
+    if (cleDonnees) {
+      try { await lireCoffre(stockage, cleDonnees); } catch { cleDonnees = null; } // clé rangée qui ne correspond plus
+    }
+    if (!cleDonnees) cleDonnees = await demanderMotDePasse(false);
+  }
+  try { await rangerCle(cleDonnees); } catch { /* sans IndexedDB : le mot de passe sera redemandé à chaque ouverture */ }
+  contenu = (await lireCoffre(stockage, cleDonnees)) ?? { etat: charger(stockage).etat, pont: { url: '', cle: '' } };
+  $('app').hidden = false;
+}
+
+$('verrouiller').onclick = async () => {
+  // Confirmation : un appui involontaire ne doit rien verrouiller.
+  if (!confirm('Verrouiller l\'app ? Ton mot de passe sera redemandé à la prochaine ouverture.')) return;
+  await effacerCle().catch(() => {});
+  location.reload();
+};
+
+// ---- 3 bis. Pont Apps Script (sans connexion Google : l'adresse et la clé sont chiffrées dans ce téléphone)
 $('pont-lire').onclick = async () => {
   const url = $('pont-url').value.trim();
   const cle = $('pont-cle').value.trim();
   if (!url || !cle) { dit('pont', 'Renseigne l\'adresse du pont et la clé.', 'ko'); return; }
   // La clé n'est jamais envoyée ailleurs que chez Google Apps Script.
   if (!url.startsWith('https://script.google.com/macros/s/')) { dit('pont', 'L\'adresse doit commencer par https://script.google.com/macros/s/', 'ko'); return; }
-  ecrireLocal('bq-pont-url', url);
-  ecrireLocal('bq-pont-cle', cle);
+  contenu.pont = { url, cle };
+  await enregistrer();
   try {
     dit('pont', 'Lecture via le pont…');
     const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ cle, max: CONFIG.nombre }) });
@@ -135,28 +206,17 @@ $('pont-lire').onclick = async () => {
   }
 };
 
-// ---- 0. Mes comptes : vraies données, gardées dans ce téléphone, synchro automatique par le pont
-const stockage = {
-  getItem: (cle) => lireLocal(cle),
-  setItem: (cle, valeur) => { if (!ecrireLocal(cle, valeur)) throw new Error('mémoire du téléphone indisponible'); },
-};
-let etat = (() => {
-  const r = charger(stockage);
-  if (r.corrompu) dit('synchro', 'Les données enregistrées sont abîmées : rien n\'a été écrasé.', 'ko');
-  return r.etat;
-})();
-const enregistrer = () => sauver(stockage, etat);
-
+// ---- 0. Mes comptes : vraies données, chiffrées dans ce téléphone, synchro automatique par le pont
 function lireMessage(d) {
   const h = Object.fromEntries(d.payload.headers.map((x) => [x.name, x.value]));
   return { id: d.id, ts: Number(d.internalDate), objet: h.Subject || '', texte: texteDuMail(d.payload) };
 }
 
 function afficherComptes() {
-  const s = soldes(etat);
+  const s = soldes(contenu.etat);
   $('solde-banque').textContent = s.banque === null ? 'solde de départ à saisir' : enEuros(s.banque);
   $('solde-especes').textContent = s.especes === null ? 'solde de départ à saisir' : enEuros(s.especes);
-  const lignes = lister(etat).slice(0, 10);
+  const lignes = lister(contenu.etat).slice(0, 10);
   $('operations').textContent = lignes.length ? '' : 'Aucune opération pour l\'instant.';
   for (const l of lignes) {
     const ligne = document.createElement('div'); ligne.className = 'op';
@@ -173,27 +233,26 @@ function afficherComptes() {
     ligne.append(gauche, mt);
     $('operations').append(ligne);
   }
-  const n = aClasser(etat).length;
+  const n = aClasser(contenu.etat).length;
   $('a-classer').textContent = n ? n + ' libellé(s) de dépense à classer dans une catégorie.' : '';
 }
 
 let derniereTentative = 0;
 let enCours = false;
 async function synchroAuto(forcer = false) {
-  const url = lireLocal('bq-pont-url');
-  const cle = lireLocal('bq-pont-cle');
+  const { url, cle } = contenu.pont;
   if (!url || !cle) { dit('synchro', 'Pour la synchro, renseigne d\'abord le pont (section 3 bis).', 'ko'); return; }
   if (enCours || (!forcer && Date.now() - derniereTentative < 30000)) return;
   enCours = true;
   derniereTentative = Date.now();
   dit('synchro', 'Synchro…');
   try {
-    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ cle, max: LIMITE, apresTs: apresTsPour(etat) }) });
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ cle, max: LIMITE, apresTs: apresTsPour(contenu.etat) }) });
     const rep = await r.json();
     if (rep.erreur) throw new Error(rep.erreur);
-    const res = synchroniser(etat, rep.messages, { lire: lireMessage, extraire: Extraction.extraireOperation, maintenant: Date.now() });
-    etat = res.etat;
-    enregistrer();
+    const res = synchroniser(contenu.etat, rep.messages, { lire: lireMessage, extraire: Extraction.extraireOperation, maintenant: Date.now() });
+    contenu.etat = res.etat;
+    await enregistrer();
     afficherComptes();
     const p = res.rapport;
     let texte = 'Synchro de ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + ' : ' + p.ajoutees.length + ' nouvelle(s) opération(s)';
@@ -210,17 +269,17 @@ async function synchroAuto(forcer = false) {
 }
 
 $('synchro-maintenant').onclick = () => synchroAuto(true);
-$('depart-ok').onclick = () => {
+$('depart-ok').onclick = async () => {
   try {
     let saisis = 0;
     for (const [compte, champ] of [['banque', 'depart-banque'], ['especes', 'depart-especes']]) {
       const valeur = $(champ).value.trim();
       if (!valeur) continue;
-      etat = definirReference(etat, compte, enCentimes(valeur), Date.now());
+      contenu.etat = definirReference(contenu.etat, compte, enCentimes(valeur), Date.now());
       saisis += 1;
     }
     if (!saisis) throw new Error('Saisis au moins un montant.');
-    enregistrer();
+    await enregistrer();
     afficherComptes();
     $('depart-banque').value = '';
     $('depart-especes').value = '';
@@ -231,6 +290,10 @@ $('depart-ok').onclick = () => {
 };
 // À l'ouverture de l'app et à chaque retour dedans (au plus une fois toutes les 30 secondes).
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') synchroAuto(); });
+// Rien ne s'affiche ni ne se synchronise avant l'ouverture du coffre.
+await ouvrirApp();
+$('pont-url').value = contenu.pont.url;
+$('pont-cle').value = contenu.pont.cle;
 afficherComptes();
 synchroAuto();
 
