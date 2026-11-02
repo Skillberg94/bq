@@ -6,6 +6,9 @@ import { etatDeTest } from './donnees-test.js';
 import { charger, definirReference, soldes, lister, CLE_STOCKAGE } from './noyau/donnees.js';
 import { coffreExiste, lireEntete, ouvrirCoffre, lireCoffre, ecrireCoffre, installerCoffre, verifierMotDePasse } from './noyau/coffre.js';
 import { lireCle, rangerCle, effacerCle } from './porte-cles.js';
+import {
+  creerSauvegarde, nomDeFichier, lireSauvegarde, ouvrirSauvegarde, restaurer, restaurationAnnulable, annulerRestauration, rappelSauvegarde,
+} from './noyau/sauvegarde.js';
 import { synchroniser, apresTsPour, LIMITE } from './noyau/synchro.js';
 import { enCentimes, enEuros } from './noyau/montants.js';
 import { aClasser } from './noyau/categories.js';
@@ -127,6 +130,7 @@ const enregistrer = () => ecrireCoffre(stockage, cleDonnees, contenu).catch((e) 
 function demanderMotDePasse(creation) {
   $('verrou').hidden = false;
   $('mdp2').hidden = !creation;
+  $('verrou-sauvegarde').hidden = false; // restaurer depuis l'écran du mot de passe (nouveau téléphone, données effacées)
   $('mdp').autocomplete = creation ? 'new-password' : 'current-password';
   $('verrou-titre').textContent = creation ? 'Crée ton mot de passe' : 'Saisis ton mot de passe';
   $('verrou-explication').textContent = creation
@@ -175,6 +179,67 @@ async function ouvrirApp() {
   try { await rangerCle(cleDonnees); } catch { /* sans IndexedDB : le mot de passe sera redemandé à chaque ouverture */ }
   contenu = (await lireCoffre(stockage, cleDonnees)) ?? { etat: charger(stockage).etat, pont: { url: '', cle: '' } };
   $('app').hidden = false;
+}
+
+// ---- Sauvegarde et restauration
+const dateFr = (iso) => iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
+const lireFichier = (champ) => new Promise((ok, ko) => {
+  const f = champ.files && champ.files[0];
+  if (!f) { ko(new Error('Choisis d\'abord le fichier de sauvegarde.')); return; }
+  f.text().then(ok, ko);
+});
+
+/** Ouvre la sauvegarde choisie, demande confirmation, remplace les données, range la clé et recharge l'app. */
+async function restaurerDepuis(champFichier, champMdp, zone, avecConfirmation) {
+  try {
+    const fichier = lireSauvegarde(await lireFichier(champFichier));
+    dit(zone, 'Ouverture de la sauvegarde…');
+    const o = await ouvrirSauvegarde(fichier, champMdp.value);
+    const r = o.resume;
+    const resume = 'Sauvegarde du ' + dateFr(r.cree) + ' : ' + r.operations + ' opération(s)'
+      + (r.banque === null ? '' : ', banque ' + enEuros(r.banque)) + (r.especes === null ? '' : ', espèces ' + enEuros(r.especes)) + '.';
+    if (avecConfirmation && !confirm(resume + '\n\nRemplacer tes données actuelles ? Une copie de sécurité est gardée.')) { dit(zone, 'Restauration annulée.'); return; }
+    await restaurer(stockage, fichier, o.cle);
+    try { await rangerCle(o.cle); } catch { /* le mot de passe sera redemandé */ }
+    champMdp.value = '';
+    dit(zone, 'Restauré. ' + resume + ' Ouverture…', 'ok');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    dit(zone, e.message, 'ko');
+  }
+}
+$('verrou-restaurer').onclick = () => restaurerDepuis($('verrou-fichier'), $('verrou-fichier-mdp'), 'verrou-restauration', !!lireLocal('banque-donnees-chiffrees-v1'));
+$('resto-ok').onclick = () => restaurerDepuis($('resto-fichier'), $('resto-mdp'), 'resto-message', true);
+$('resto-annuler').onclick = async () => {
+  if (!confirm('Revenir aux données d\'avant la dernière restauration ? Le mot de passe de ces données te sera demandé.')) return;
+  try {
+    annulerRestauration(stockage);
+    await effacerCle().catch(() => {});
+    location.reload();
+  } catch (e) {
+    dit('resto-message', e.message, 'ko');
+  }
+};
+
+async function sauvegarder(partager) {
+  try {
+    dit('sauvegarde-message', 'Préparation…');
+    const maintenant = Date.now();
+    const { fichier, contenu: aJour } = await creerSauvegarde(stockage, cleDonnees, contenu, maintenant);
+    const blob = new Blob([JSON.stringify(fichier)], { type: 'application/json' });
+    const r = await livrer(nomDeFichier(maintenant), blob, partager);
+    if (r.ok) { contenu = aJour; await enregistrer(); afficherRappel(); } // date notée seulement si le fichier est bien parti
+    dit('sauvegarde-message', r.message, r.ok ? 'ok' : 'ko');
+  } catch (e) {
+    dit('sauvegarde-message', 'Sauvegarde impossible : ' + e.message, 'ko');
+  }
+}
+$('sauvegarde-partager').onclick = () => sauvegarder(true);
+$('sauvegarde-telecharger').onclick = () => sauvegarder(false);
+function afficherRappel() {
+  const texte = rappelSauvegarde(contenu, Date.now());
+  $('rappel-sauvegarde').textContent = texte ? texte + ' Pense à en faire une (section 6).' : '';
+  $('resto-annuler-bloc').hidden = !restaurationAnnulable(stockage);
 }
 
 $('verrouiller').onclick = async () => {
@@ -240,6 +305,7 @@ function afficherComptes() {
 let derniereTentative = 0;
 let enCours = false;
 async function synchroAuto(forcer = false) {
+  if (!contenu) return; // coffre pas encore ouvert (écran du mot de passe affiché)
   const { url, cle } = contenu.pont;
   if (!url || !cle) { dit('synchro', 'Pour la synchro, renseigne d\'abord le pont (section 3 bis).', 'ko'); return; }
   if (enCours || (!forcer && Date.now() - derniereTentative < 30000)) return;
@@ -295,15 +361,16 @@ await ouvrirApp();
 $('pont-url').value = contenu.pont.url;
 $('pont-cle').value = contenu.pont.cle;
 afficherComptes();
+afficherRappel();
 synchroAuto();
 
 // ---- 4. Export
 async function livrer(nom, blob, partager) {
   const fichier = new File([blob], nom, { type: blob.type });
   if (partager) {
-    if (!(navigator.canShare && navigator.canShare({ files: [fichier] }))) return 'Le partage de fichiers n\'est pas disponible ici : utilise « télécharger ».';
-    try { await navigator.share({ files: [fichier] }); return 'Fichier partagé : ' + nom; }
-    catch (e) { return e.name === 'AbortError' ? 'Partage annulé.' : 'Partage impossible : ' + e.message; }
+    if (!(navigator.canShare && navigator.canShare({ files: [fichier] }))) return { ok: false, message: "Le partage de fichiers n'est pas disponible ici : utilise « télécharger »." };
+    try { await navigator.share({ files: [fichier] }); return { ok: true, message: 'Fichier partagé : ' + nom }; }
+    catch (e) { return { ok: false, message: e.name === 'AbortError' ? 'Partage annulé.' : 'Partage impossible : ' + e.message }; }
   }
   const lien = document.createElement('a');
   lien.href = URL.createObjectURL(blob);
@@ -312,7 +379,7 @@ async function livrer(nom, blob, partager) {
   lien.click();
   lien.remove();
   setTimeout(() => URL.revokeObjectURL(lien.href), 60000);
-  return 'Téléchargement lancé : ' + nom;
+  return { ok: true, message: 'Téléchargement lancé : ' + nom };
 }
 
 const tables = () => tableaux(etatDeTest(), '2026-10-31');
@@ -329,7 +396,8 @@ async function exporter(format, partager) {
       blob = await writeExcelFile(feuillesXlsx(tables())).toBlob();
       nom = 'bq-exemple.xlsx';
     }
-    dit('export', await livrer(nom, blob, partager), 'ok');
+    const r = await livrer(nom, blob, partager);
+    dit('export', r.message, r.ok ? 'ok' : 'ko');
   } catch (e) {
     dit('export', 'Erreur : ' + e.message, 'ko');
   }

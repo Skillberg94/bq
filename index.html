@@ -55,6 +55,13 @@
   <input id="mdp2" type="password" autocomplete="new-password" placeholder="le même, une deuxième fois" style="margin-top:8px" hidden>
   <p><button id="mdp-ok">Valider</button></p>
   <div id="verrou-message" class="info"></div>
+  <details id="verrou-sauvegarde" hidden>
+    <summary class="petit">J'ai déjà une sauvegarde (nouveau téléphone, données effacées)</summary>
+    <input id="verrou-fichier" type="file" accept=".json,application/json" style="margin-top:8px">
+    <input id="verrou-fichier-mdp" type="password" autocomplete="current-password" placeholder="mot de passe de la sauvegarde" style="margin-top:8px">
+    <p><button id="verrou-restaurer" class="second">Restaurer cette sauvegarde</button></p>
+    <div id="verrou-restauration" class="info"></div>
+  </details>
 </div>
 
 <div id="app" hidden>
@@ -64,6 +71,7 @@
   <tr><td class="petit">Espèces</td><td id="solde-especes" class="solde">…</td></tr>
 </table>
 <div id="synchro" class="info"></div>
+<div id="rappel-sauvegarde" class="ko"></div>
 <p><button id="synchro-maintenant" class="second">Synchroniser maintenant</button></p>
 <div id="a-classer" class="petit"></div>
 <div id="operations"></div>
@@ -109,6 +117,23 @@
   <button id="csv-telecharger" class="second">CSV : télécharger</button>
 </p>
 <div id="export" class="info"></div>
+
+<h2>6. Sauvegarde</h2>
+<p class="petit">Fichier chiffré avec ton mot de passe : range-le dans Fichiers ou sur iCloud Drive. Sans le mot de passe, il est illisible.</p>
+<p>
+  <button id="sauvegarde-partager">Créer une sauvegarde</button>
+  <button id="sauvegarde-telecharger" class="second">La télécharger</button>
+</p>
+<div id="sauvegarde-message" class="info"></div>
+<details>
+  <summary class="petit">Restaurer une sauvegarde (remplace tes données actuelles)</summary>
+  <p class="petit">Une copie de sécurité de tes données actuelles est gardée dans le téléphone : tu pourras revenir en arrière.</p>
+  <input id="resto-fichier" type="file" accept=".json,application/json">
+  <input id="resto-mdp" type="password" autocomplete="current-password" placeholder="mot de passe de la sauvegarde" style="margin-top:8px">
+  <p><button id="resto-ok" class="second">Restaurer</button></p>
+  <div id="resto-message" class="info"></div>
+  <p id="resto-annuler-bloc" hidden><button id="resto-annuler" class="second">Revenir aux données d'avant la dernière restauration</button></p>
+</details>
 
 <!-- Emplacement provisoire : l'endroit définitif sera choisi avec les vrais écrans (pas en accès direct sur l'accueil). -->
 <details>
