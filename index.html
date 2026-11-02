@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
-<title>BQ - test</title>
+<title>Suivi dépense</title>
 <!-- Bibliothèques copiées dans vendor/ : pas de compilation, le navigateur lit les modules directement. -->
 <script type="importmap">
 { "imports": {
@@ -20,127 +20,181 @@
 } }
 </script>
 <style>
+  /* Écran PROVISOIRE et volontairement simple (brique 12a) : il reprend les informations de la maquette du
+     propriétaire ; le vrai design sera fait avec Tool Design. */
   :root { color-scheme: dark; }
-  body { font-family: -apple-system, system-ui, sans-serif; background: #0f1218; color: #eee; margin: 0;
-         padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); max-width: 640px; }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  h2 { font-size: 17px; margin: 22px 0 8px; border-top: 1px solid #2a3140; padding-top: 14px; }
-  button { font-size: 16px; padding: 11px 16px; border-radius: 10px; border: 0; background: #2a6df4; color: #fff; margin: 4px 6px 4px 0; }
-  button.second { background: #343c4d; }
-  input { font-size: 16px; padding: 10px; border-radius: 8px; border: 1px solid #343c4d; background: #181d27; color: #eee; width: 100%; box-sizing: border-box; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, system-ui, sans-serif; background: #0f1218; color: #eee; margin: 0 auto; max-width: 560px;
+         padding: max(16px, env(safe-area-inset-top)) 14px max(24px, env(safe-area-inset-bottom)); }
+  h1 { font-size: 20px; margin: 0; } .sous { color: #98a2b3; font-size: 13px; }
+  h2 { font-size: 16px; margin: 0 0 8px; }
+  .entete { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .entete img { width: 44px; height: 44px; border-radius: 10px; }
+  .carte { border: 1px solid #2a3140; border-radius: 12px; padding: 12px; margin: 0 0 12px; background: #141a24; }
+  .soldes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .soldes .carte { margin: 0; }
+  .nom { font-size: 13px; color: #98a2b3; }
+  .montant { font-size: 20px; font-weight: 700; margin-top: 2px; white-space: nowrap; }
+  .montant.vide { font-size: 13px; font-weight: 400; color: #98a2b3; }
+  .ligne { display: flex; align-items: center; gap: 10px; padding: 9px 6px; border-top: 1px solid #2a3140; cursor: pointer; }
+  .ligne:first-child { border-top: 0; }
+  .ligne .milieu { flex: 1; min-width: 0; }
+  .ligne .lib { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ligne .date { color: #98a2b3; font-size: 12px; margin-top: 2px; }
+  .ligne .mt { color: #ff8a8a; font-weight: 700; white-space: nowrap; }
+  .ligne.saisie { background: #2a2414; border-radius: 8px; } /* dépense saisie à la main : fond d'une autre couleur */
+  .badge { font-size: 11px; color: #98a2b3; border: 1px solid #343c4d; border-radius: 4px; padding: 1px 5px; margin-left: 4px; }
+  label { display: block; font-size: 13px; color: #98a2b3; }
+  .champs { display: grid; grid-template-columns: 2fr 3fr; gap: 10px; }
+  input:not([type=checkbox]):not([type=file]), select { font-size: 16px; width: 100%; margin-top: 4px; padding: 10px; border-radius: 8px;
+    border: 1px solid #343c4d; background: #181d27; color: #eee; }
+  .case { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; }
+  button { font-size: 15px; padding: 10px 14px; border-radius: 10px; border: 0; background: #2a6df4; color: #fff; margin: 4px 6px 4px 0; cursor: pointer; }
+  .menu button, #verrou button { background: #343c4d; }
+  .tete-seuil { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .tete-seuil select { width: auto; margin: 0; padding: 6px 8px; font-size: 14px; }
+  .jauge { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; }
+  .jauge b { font-size: 26px; }
+  .barre { height: 14px; border-radius: 999px; background: #0b0f15; border: 1px solid #2a3140; margin: 10px 0; overflow: hidden; }
+  .barre div { height: 100%; width: 0; background: #e9b949; transition: width .4s; }
+  .barre.depasse div { background: #ff6b6b; }
+  .reste b { font-size: 22px; color: #6ee7a0; } .reste.depasse b { color: #ff8a8a; }
+  .lien { background: none; color: #8ecbff; text-decoration: underline; padding: 4px 0; font-size: 13px; }
   .petit { color: #98a2b3; font-size: 13px; }
   .ok { color: #6ee7a0; } .ko { color: #ff8a8a; } .info { color: #8ecbff; }
+  .etat-synchro { font-size: 12px; margin: 0 0 8px; min-height: 14px; }
+  .rappel { font-size: 13px; color: #e9b949; margin: 0 0 10px; }
+  details.menu > summary { cursor: pointer; text-align: center; padding: 12px; color: #8ecbff; }
+  .menu h3 { font-size: 14px; margin: 16px 0 6px; }
+  .menu details { margin-top: 8px; }
   .mail { border: 1px solid #2a3140; border-radius: 10px; padding: 10px; margin: 10px 0; }
   .mail b { display: block; }
   .compte { background: #12301d; border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
   .ignore { background: #3a2a10; border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
   pre { white-space: pre-wrap; font-size: 12px; background: #181d27; padding: 8px; border-radius: 6px; }
-  table { border-collapse: collapse; font-size: 14px; } td { padding: 2px 10px 2px 0; }
-  .solde { font-size: 22px; font-weight: 600; }
-  .op { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid #2a3140; }
-  .op .lib { font-size: 14px; } .op .date { color: #98a2b3; font-size: 12px; }
-  .op .mt { white-space: nowrap; font-weight: 600; } .moins { color: #ff8a8a; } .plus { color: #6ee7a0; }
-  .tag { font-size: 11px; color: #98a2b3; border: 1px solid #343c4d; border-radius: 4px; padding: 0 4px; margin-left: 4px; }
-  details { margin-top: 10px; }
+  table { border-collapse: collapse; font-size: 13px; } td { padding: 2px 10px 2px 0; }
 </style>
 </head>
 <body>
-<h1>BQ — test</h1>
-<p class="petit">Page de test : aucune donnée n'est envoyée nulle part. Les réglages restent dans ce téléphone.</p>
+<header class="entete">
+  <img src="icon-192.png" alt="">
+  <div><h1>SUIVI DÉPENSE</h1><div class="sous">Accueil (écran provisoire)</div></div>
+</header>
 
-<div id="verrou" hidden>
+<div id="verrou" class="carte" hidden>
   <h2 id="verrou-titre">Mot de passe</h2>
   <p id="verrou-explication" class="petit"></p>
   <input id="mdp" type="password" autocomplete="current-password" placeholder="mot de passe (10 caractères minimum)">
-  <input id="mdp2" type="password" autocomplete="new-password" placeholder="le même, une deuxième fois" style="margin-top:8px" hidden>
+  <input id="mdp2" type="password" autocomplete="new-password" placeholder="le même, une deuxième fois" hidden>
   <p><button id="mdp-ok">Valider</button></p>
   <div id="verrou-message" class="info"></div>
   <details id="verrou-sauvegarde" hidden>
     <summary class="petit">J'ai déjà une sauvegarde (nouveau téléphone, données effacées)</summary>
     <input id="verrou-fichier" type="file" accept=".json,application/json" style="margin-top:8px">
-    <input id="verrou-fichier-mdp" type="password" autocomplete="current-password" placeholder="mot de passe de la sauvegarde" style="margin-top:8px">
-    <p><button id="verrou-restaurer" class="second">Restaurer cette sauvegarde</button></p>
+    <input id="verrou-fichier-mdp" type="password" autocomplete="current-password" placeholder="mot de passe de la sauvegarde">
+    <p><button id="verrou-restaurer">Restaurer cette sauvegarde</button></p>
     <div id="verrou-restauration" class="info"></div>
   </details>
 </div>
 
 <div id="app" hidden>
-<h2>0. Mes comptes</h2>
-<table>
-  <tr><td class="petit">Banque</td><td id="solde-banque" class="solde">…</td></tr>
-  <tr><td class="petit">Espèces</td><td id="solde-especes" class="solde">…</td></tr>
-</table>
-<div id="synchro" class="info"></div>
-<div id="rappel-sauvegarde" class="ko"></div>
-<p><button id="synchro-maintenant" class="second">Synchroniser maintenant</button></p>
-<div id="a-classer" class="petit"></div>
-<div id="operations"></div>
-<details>
-  <summary class="petit">Solde de départ (à saisir une fois, modifiable)</summary>
-  <p class="petit">Les alertes arrivées avant ce moment restent affichées mais ne changent pas le solde.</p>
-  <input id="depart-banque" inputmode="decimal" placeholder="Banque, par exemple 107,19">
-  <input id="depart-especes" inputmode="decimal" placeholder="Espèces, par exemple 20" style="margin-top:8px">
-  <p><button id="depart-ok">Enregistrer</button></p>
-  <div id="depart-message"></div>
-</details>
+  <div id="synchro" class="etat-synchro" data-base="etat-synchro"></div>
+  <div id="rappel-sauvegarde" class="rappel"></div>
 
-<h2>1. Ce téléphone</h2>
-<table id="etat"></table>
+  <section class="soldes">
+    <div class="carte"><div class="nom">Compte bancaire</div><div id="solde-banque" class="montant">…</div></div>
+    <div class="carte"><div class="nom">Espèces</div><div id="solde-especes" class="montant">…</div></div>
+  </section>
 
-<h2>2. Mémoire de l'app</h2>
-<p class="petit">Ferme l'app, rouvre-la : le compteur doit continuer. Si il repart de 1, la mémoire est perdue.</p>
-<div id="memoire"></div>
+  <section class="carte">
+    <h2>Dernières dépenses</h2>
+    <div id="depenses"></div>
+    <div id="a-classer" class="petit" style="padding-top:6px"></div>
+  </section>
 
-<h2>3. Connexion Gmail (lecture seule)</h2>
-<p class="petit">Expéditeur des alertes de ta banque (une partie de l'adresse suffit). Il reste dans ce téléphone.</p>
-<input id="expediteur" placeholder="expéditeur des alertes" autocapitalize="none" autocorrect="off" spellcheck="false">
-<p><button id="connexion">Se connecter à Gmail</button></p>
-<div id="gmail" class="info"></div>
+  <section class="carte">
+    <h2>Ajouter une dépense en espèces</h2>
+    <div class="champs">
+      <label>Montant<input id="saisie-montant" inputmode="decimal" placeholder="0,00 €" autocomplete="off"></label>
+      <label>Description<input id="saisie-description" placeholder="Ex : Courses, Restaurant …" autocomplete="off"></label>
+    </div>
+    <label class="case"><input id="saisie-banque" type="checkbox"> Dépense banque (si l'alerte mail n'arrive pas)</label>
+    <button id="saisie-ajouter">Ajouter</button>
+    <div id="saisie-message" class="petit" data-base="petit"></div>
+  </section>
 
-<h2>3 bis. Pont Apps Script (sans connexion Google)</h2>
-<p class="petit">Adresse du pont et clé secrète : elles restent dans ce téléphone. L'expéditeur est réglé dans le script, pas ici.</p>
-<input id="pont-url" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="none" autocorrect="off" spellcheck="false">
-<input id="pont-cle" type="password" placeholder="clé secrète" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" style="margin-top:8px">
-<p><button id="pont-lire">Lire via le pont</button></p>
-<div id="pont" class="info"></div>
+  <section class="carte">
+    <div class="tete-seuil">
+      <h2>Seuil de dépense</h2>
+      <select id="periode" aria-label="Période">
+        <option value="jour">Aujourd'hui</option>
+        <option value="semaine">Semaine en cours</option>
+        <option value="mois" selected>Mois en cours</option>
+      </select>
+    </div>
+    <div class="jauge"><span><b id="jauge-pct">—</b> du seuil utilisé</span><span id="jauge-chiffres" class="petit">—</span></div>
+    <div class="barre" id="barre"><div id="barre-plein"></div></div>
+    <div class="reste" id="jauge-reste"></div>
+    <button id="seuil-regler" class="lien">Régler le seuil mensuel</button>
+  </section>
 
-<div id="liste"></div>
+  <!-- Menu provisoire : le vrai menu viendra à l'étape 12c. Rien ici n'est en accès direct sur l'accueil. -->
+  <details class="menu">
+    <summary>Menu (provisoire)</summary>
 
-<h2>4. Export (données inventées)</h2>
-<p class="petit">Teste le fichier Excel et le CSV avec des opérations d'exemple. « Partager » ouvre la feuille de partage de l'iPhone ; « Télécharger » enregistre directement.</p>
-<p>
-  <button id="xlsx-partager">Excel : partager</button>
-  <button id="xlsx-telecharger" class="second">Excel : télécharger</button>
-</p>
-<p>
-  <button id="csv-partager">CSV : partager</button>
-  <button id="csv-telecharger" class="second">CSV : télécharger</button>
-</p>
-<div id="export" class="info"></div>
+    <h3>Synchro des alertes</h3>
+    <p><button id="synchro-maintenant">Synchroniser maintenant</button></p>
 
-<h2>6. Sauvegarde</h2>
-<p class="petit">Fichier chiffré avec ton mot de passe : range-le dans Fichiers ou sur iCloud Drive. Sans le mot de passe, il est illisible.</p>
-<p>
-  <button id="sauvegarde-partager">Créer une sauvegarde</button>
-  <button id="sauvegarde-telecharger" class="second">La télécharger</button>
-</p>
-<div id="sauvegarde-message" class="info"></div>
-<details>
-  <summary class="petit">Restaurer une sauvegarde (remplace tes données actuelles)</summary>
-  <p class="petit">Une copie de sécurité de tes données actuelles est gardée dans le téléphone : tu pourras revenir en arrière.</p>
-  <input id="resto-fichier" type="file" accept=".json,application/json">
-  <input id="resto-mdp" type="password" autocomplete="current-password" placeholder="mot de passe de la sauvegarde" style="margin-top:8px">
-  <p><button id="resto-ok" class="second">Restaurer</button></p>
-  <div id="resto-message" class="info"></div>
-  <p id="resto-annuler-bloc" hidden><button id="resto-annuler" class="second">Revenir aux données d'avant la dernière restauration</button></p>
-</details>
+    <h3>Soldes de départ</h3>
+    <p class="petit">Les alertes arrivées avant ce moment restent affichées mais ne changent pas le solde.</p>
+    <input id="depart-banque" inputmode="decimal" placeholder="Banque, par exemple 107,19">
+    <input id="depart-especes" inputmode="decimal" placeholder="Espèces, par exemple 20">
+    <p><button id="depart-ok">Enregistrer</button></p>
+    <div id="depart-message"></div>
 
-<!-- Emplacement provisoire : l'endroit définitif sera choisi avec les vrais écrans (pas en accès direct sur l'accueil). -->
-<details>
-  <summary class="petit">Réglages avancés</summary>
-  <p class="petit">« Verrouiller » efface la clé de ce téléphone : le mot de passe sera redemandé à la prochaine ouverture. Tes données restent chiffrées dans le téléphone.</p>
-  <p><button id="verrouiller" class="second">Verrouiller maintenant</button></p>
-</details>
+    <h3>Pont Apps Script</h3>
+    <p class="petit">Adresse du pont et clé secrète : chiffrées dans ce téléphone.</p>
+    <input id="pont-url" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="none" autocorrect="off" spellcheck="false">
+    <input id="pont-cle" type="password" placeholder="clé secrète" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false">
+    <p><button id="pont-lire">Lire via le pont (diagnostic)</button></p>
+    <div id="pont" class="info"></div>
+
+    <h3>Sauvegarde</h3>
+    <p class="petit">Fichier chiffré avec ton mot de passe : range-le dans Fichiers ou sur iCloud Drive.</p>
+    <p><button id="sauvegarde-partager">Créer une sauvegarde</button><button id="sauvegarde-telecharger">La télécharger</button></p>
+    <div id="sauvegarde-message" class="info"></div>
+    <details>
+      <summary class="petit">Restaurer une sauvegarde (remplace tes données actuelles)</summary>
+      <p class="petit">Une copie de sécurité de tes données actuelles est gardée : tu pourras revenir en arrière.</p>
+      <input id="resto-fichier" type="file" accept=".json,application/json">
+      <input id="resto-mdp" type="password" autocomplete="current-password" placeholder="mot de passe de la sauvegarde">
+      <p><button id="resto-ok">Restaurer</button></p>
+      <div id="resto-message" class="info"></div>
+      <p id="resto-annuler-bloc" hidden><button id="resto-annuler">Revenir aux données d'avant la dernière restauration</button></p>
+    </details>
+
+    <details>
+      <summary class="petit">Outils de test</summary>
+      <h3>Ce téléphone</h3>
+      <table id="etat"></table>
+      <div id="memoire" class="petit"></div>
+      <h3>Connexion Gmail (secours)</h3>
+      <input id="expediteur" placeholder="expéditeur des alertes" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <p><button id="connexion">Se connecter à Gmail</button></p>
+      <div id="gmail" class="info"></div>
+      <div id="liste"></div>
+      <h3>Export de démonstration (données inventées)</h3>
+      <p><button id="xlsx-partager">Excel : partager</button><button id="xlsx-telecharger">Excel : télécharger</button></p>
+      <p><button id="csv-partager">CSV : partager</button><button id="csv-telecharger">CSV : télécharger</button></p>
+      <div id="export" class="info"></div>
+    </details>
+
+    <details>
+      <summary class="petit">Réglages avancés</summary>
+      <p class="petit">« Verrouiller » efface la clé de ce téléphone : le mot de passe sera redemandé à la prochaine ouverture. Tes données restent chiffrées.</p>
+      <p><button id="verrouiller">Verrouiller maintenant</button></p>
+    </details>
+  </details>
 </div>
 
 <script src="config.js"></script>

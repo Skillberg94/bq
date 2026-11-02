@@ -3,7 +3,9 @@ import { tableaux } from './noyau/tableaux.js';
 import { enCsv } from './noyau/csv.js';
 import { feuillesXlsx } from './noyau/xlsx.js';
 import { etatDeTest } from './donnees-test.js';
-import { charger, definirReference, soldes, lister, CLE_STOCKAGE } from './noyau/donnees.js';
+import { charger, definirReference, soldes, lister, ajouterManuel, CLE_STOCKAGE } from './noyau/donnees.js';
+import { jauge, definirSeuilMois } from './noyau/seuils.js';
+import { dateLocale } from './noyau/dates.js';
 import { coffreExiste, lireEntete, ouvrirCoffre, lireCoffre, ecrireCoffre, installerCoffre, verifierMotDePasse } from './noyau/coffre.js';
 import { lireCle, rangerCle, effacerCle } from './porte-cles.js';
 import {
@@ -14,7 +16,8 @@ import { enCentimes, enEuros } from './noyau/montants.js';
 import { aClasser } from './noyau/categories.js';
 
 const $ = (id) => document.getElementById(id);
-const dit = (id, texte, classe = 'info') => { $(id).textContent = texte; $(id).className = classe; };
+// Le message garde sa mise en forme de base (attribut data-base) en plus de sa couleur.
+const dit = (id, texte, classe = 'info') => { const e = $(id); e.textContent = texte; e.className = (e.dataset.base ? e.dataset.base + ' ' : '') + classe; };
 const lireLocal = (cle) => { try { return localStorage.getItem(cle); } catch { return null; } };
 const ecrireLocal = (cle, valeur) => { try { localStorage.setItem(cle, valeur); return true; } catch { return false; } };
 
@@ -238,7 +241,7 @@ $('sauvegarde-partager').onclick = () => sauvegarder(true);
 $('sauvegarde-telecharger').onclick = () => sauvegarder(false);
 function afficherRappel() {
   const texte = rappelSauvegarde(contenu, Date.now());
-  $('rappel-sauvegarde').textContent = texte ? texte + ' Pense à en faire une (section 6).' : '';
+  $('rappel-sauvegarde').textContent = texte ? texte + ' Pense à en faire une (menu, Sauvegarde).' : '';
   $('resto-annuler-bloc').hidden = !restaurationAnnulable(stockage);
 }
 
@@ -277,37 +280,119 @@ function lireMessage(d) {
   return { id: d.id, ts: Number(d.internalDate), objet: h.Subject || '', texte: texteDuMail(d.payload) };
 }
 
+// Écran d'accueil provisoire (brique 12a) : soldes, dernières dépenses, saisie, seuil de dépense.
+const dateLongue = (d) => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+function nomCategorie(l) {
+  if (l.retrait) return 'retrait';
+  if (!l.categorie) return 'à classer';
+  return contenu.etat.categories.find((c) => c.id === l.categorie)?.nom ?? 'à classer';
+}
+
 function afficherComptes() {
-  const s = soldes(contenu.etat);
-  $('solde-banque').textContent = s.banque === null ? 'solde de départ à saisir' : enEuros(s.banque);
-  $('solde-especes').textContent = s.especes === null ? 'solde de départ à saisir' : enEuros(s.especes);
-  const lignes = lister(contenu.etat).slice(0, 10);
-  $('operations').textContent = lignes.length ? '' : 'Aucune opération pour l\'instant.';
-  for (const l of lignes) {
-    const ligne = document.createElement('div'); ligne.className = 'op';
-    const gauche = document.createElement('div');
+  const etat = contenu.etat;
+  const s = soldes(etat);
+  for (const [id, v] of [['solde-banque', s.banque], ['solde-especes', s.especes]]) {
+    $(id).textContent = v === null ? 'solde de départ à saisir (menu)' : enEuros(v);
+    $(id).className = 'montant' + (v === null ? ' vide' : '');
+  }
+  const depenses = lister(etat).filter((l) => l.sens === 'sortie').slice(0, 5);
+  $('depenses').textContent = depenses.length ? '' : "Aucune dépense pour l'instant.";
+  for (const l of depenses) {
+    const ligne = document.createElement('div');
+    ligne.className = 'ligne' + (l.source === 'manuel' ? ' saisie' : ''); // saisie à la main : fond d'une autre couleur
+    const milieu = document.createElement('div'); milieu.className = 'milieu';
     const lib = document.createElement('div'); lib.className = 'lib'; lib.textContent = l.emetteurReel || l.libelle;
     const date = document.createElement('div'); date.className = 'date';
-    date.textContent = l.date.slice(8, 10) + '/' + l.date.slice(5, 7) + ' · ' + (l.compte === 'banque' ? 'banque' : 'espèces');
-    const etiquettes = [l.retrait && 'retrait', l.aClasser && 'à classer', !l.comptee && 'hors solde'].filter(Boolean);
-    for (const t of etiquettes) { const e = document.createElement('span'); e.className = 'tag'; e.textContent = t; date.append(e); }
-    gauche.append(lib, date);
-    const mt = document.createElement('div');
-    mt.className = 'mt ' + (l.sens === 'sortie' ? 'moins' : 'plus');
-    mt.textContent = enEuros(l.sens === 'sortie' ? -l.centimes : l.centimes, { signe: true });
-    ligne.append(gauche, mt);
-    $('operations').append(ligne);
+    date.textContent = dateLongue(l.date) + ' · ' + nomCategorie(l);
+    const etiquettes = [
+      l.compte === 'especes' && 'Espèces',
+      l.source === 'manuel' && l.compte === 'banque' && 'Saisie banque',
+      l.retrait && 'Retrait',
+      !l.comptee && 'hors solde',
+    ].filter(Boolean);
+    for (const t of etiquettes) { const e = document.createElement('span'); e.className = 'badge'; e.textContent = t; date.append(e); }
+    milieu.append(lib, date);
+    const mt = document.createElement('div'); mt.className = 'mt'; mt.textContent = enEuros(-l.centimes);
+    ligne.append(milieu, mt);
+    $('depenses').append(ligne);
   }
-  const n = aClasser(contenu.etat).length;
+  const n = aClasser(etat).length;
   $('a-classer').textContent = n ? n + ' libellé(s) de dépense à classer dans une catégorie.' : '';
+  afficherJauge();
 }
+
+const periodeChoisie = () => lireLocal('bq-periode') || 'mois';
+function afficherJauge() {
+  const j = jauge(contenu.etat, periodeChoisie(), dateLocale(Date.now()));
+  $('periode').value = periodeChoisie();
+  const reste = $('jauge-reste');
+  if (j.seuil === null) {
+    $('jauge-pct').textContent = '—';
+    $('jauge-chiffres').textContent = enEuros(j.depense) + ' dépensés';
+    $('barre-plein').style.width = '0';
+    $('barre').className = 'barre';
+    reste.className = 'reste';
+    reste.textContent = 'Seuil non réglé.';
+    $('seuil-regler').textContent = 'Régler le seuil mensuel';
+    return;
+  }
+  const pct = Math.round((j.depense / j.seuil) * 100);
+  $('jauge-pct').textContent = pct + ' %';
+  $('jauge-chiffres').textContent = enEuros(j.depense) + ' / ' + enEuros(j.seuil);
+  $('barre-plein').style.width = Math.min(pct, 100) + '%';
+  $('barre').className = 'barre' + (j.depasse ? ' depasse' : '');
+  reste.className = 'reste' + (j.depasse ? ' depasse' : '');
+  reste.textContent = j.depasse ? 'Dépassement : ' : 'Reste à dépenser : ';
+  const b = document.createElement('b'); b.textContent = enEuros(Math.abs(j.reste)); reste.append(b);
+  $('seuil-regler').textContent = 'Modifier le seuil mensuel (' + enEuros(contenu.etat.seuils.moisCentimes) + ')';
+}
+
+$('periode').onchange = () => { ecrireLocal('bq-periode', $('periode').value); afficherJauge(); };
+
+$('seuil-regler').onclick = async () => {
+  const actuel = contenu.etat.seuils.moisCentimes;
+  const reponse = prompt('Seuil de dépense par mois, en euros (les frais récurrents n’y sont pas comptés) :', actuel === null ? '' : (actuel / 100).toFixed(2).replace('.', ','));
+  if (reponse === null) return;
+  try {
+    const c = enCentimes(reponse);
+    if (c <= 0) throw new Error('Le seuil doit être un montant positif.');
+    contenu.etat = definirSeuilMois(contenu.etat, c);
+    await enregistrer();
+    afficherJauge();
+  } catch (e) {
+    alert(e.message);
+  }
+};
+
+$('saisie-ajouter').onclick = async () => {
+  try {
+    const centimes = enCentimes($('saisie-montant').value);
+    if (centimes <= 0) throw new Error('Saisis un montant positif, par exemple 4,20.');
+    const banque = $('saisie-banque').checked;
+    const maintenant = Date.now();
+    const description = $('saisie-description').value.trim();
+    contenu.etat = ajouterManuel(contenu.etat, {
+      compte: banque ? 'banque' : 'especes', sens: 'sortie',
+      libelle: description || (banque ? 'Dépense banque' : 'Dépense en espèces'),
+      date: dateLocale(maintenant), centimes, ts: maintenant,
+    }).etat;
+    await enregistrer();
+    afficherComptes();
+    $('saisie-montant').value = '';
+    $('saisie-description').value = '';
+    $('saisie-banque').checked = false;
+    dit('saisie-message', 'Ajouté : ' + enEuros(-centimes) + (banque ? ' (banque)' : ' (espèces)'), 'ok');
+  } catch (e) {
+    dit('saisie-message', e.message, 'ko');
+  }
+};
 
 let derniereTentative = 0;
 let enCours = false;
 async function synchroAuto(forcer = false) {
   if (!contenu) return; // coffre pas encore ouvert (écran du mot de passe affiché)
   const { url, cle } = contenu.pont;
-  if (!url || !cle) { dit('synchro', 'Pour la synchro, renseigne d\'abord le pont (section 3 bis).', 'ko'); return; }
+  if (!url || !cle) { dit('synchro', 'Pour la synchro, renseigne le pont dans le menu (Pont Apps Script).', 'ko'); return; }
   if (enCours || (!forcer && Date.now() - derniereTentative < 30000)) return;
   enCours = true;
   derniereTentative = Date.now();
