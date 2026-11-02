@@ -40,10 +40,8 @@ async function api(chemin, jeton) {
   return r.json();
 }
 
-function decode(b64) {
-  const bin = atob(b64.replace(/-/g, '+').replace(/_/g, '/'));
-  return new TextDecoder('utf-8').decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
-}
+// Texte codé (API Gmail) ou liste d'octets (pont Apps Script) : Extraction.decoderCorps gère les deux.
+const decode = (donnees) => Extraction.decoderCorps(donnees);
 function parties(p, type, sortie = []) {
   if (p.mimeType === type && p.body && p.body.data) sortie.push(decode(p.body.data));
   (p.parts || []).forEach((q) => parties(q, type, sortie));

@@ -51,7 +51,23 @@
     return { liste: existantes.concat(ajoutees), ajoutees };
   }
 
-  const api = { extraireOperation, fusionner };
+  // Corps d'un mail en texte. Deux formes possibles :
+  //  - l'API Gmail normale donne du base64url (texte) ;
+  //  - le service Gmail intégré à Apps Script (pont) donne les octets déjà décodés, sous forme de liste de nombres signés.
+  function decoderCorps(donnees) {
+    let octets;
+    if (typeof donnees === 'string') {
+      const bin = atob(donnees.replace(/-/g, '+').replace(/_/g, '/'));
+      octets = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+    } else if (Array.isArray(donnees)) {
+      octets = Uint8Array.from(donnees, (v) => v & 255); // -61 devient 195, etc.
+    } else {
+      throw new Error('corps de mail illisible (ni texte ni liste d\'octets)');
+    }
+    return new TextDecoder('utf-8').decode(octets);
+  }
+
+  const api = { extraireOperation, fusionner, decoderCorps };
   if (typeof module !== 'undefined') module.exports = api;
   else racine.Extraction = api;
 })(typeof window !== 'undefined' ? window : globalThis);
