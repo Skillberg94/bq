@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1218">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BQ">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>BQ - test</title>
+<!-- Bibliothèques copiées dans vendor/ : pas de compilation, le navigateur lit les modules directement. -->
+<script type="importmap">
+{ "imports": {
+  "fflate": "./vendor/fflate/esm/browser.js",
+  "write-excel-file/browser": "./vendor/write-excel-file/browser/index.js"
+} }
+</script>
+<style>
+  :root { color-scheme: dark; }
+  body { font-family: -apple-system, system-ui, sans-serif; background: #0f1218; color: #eee; margin: 0;
+         padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); max-width: 640px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 22px 0 8px; border-top: 1px solid #2a3140; padding-top: 14px; }
+  button { font-size: 16px; padding: 11px 16px; border-radius: 10px; border: 0; background: #2a6df4; color: #fff; margin: 4px 6px 4px 0; }
+  button.second { background: #343c4d; }
+  input { font-size: 16px; padding: 10px; border-radius: 8px; border: 1px solid #343c4d; background: #181d27; color: #eee; width: 100%; box-sizing: border-box; }
+  .petit { color: #98a2b3; font-size: 13px; }
+  .ok { color: #6ee7a0; } .ko { color: #ff8a8a; } .info { color: #8ecbff; }
+  .mail { border: 1px solid #2a3140; border-radius: 10px; padding: 10px; margin: 10px 0; }
+  .mail b { display: block; }
+  .compte { background: #12301d; border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
+  .ignore { background: #3a2a10; border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
+  pre { white-space: pre-wrap; font-size: 12px; background: #181d27; padding: 8px; border-radius: 6px; }
+  table { border-collapse: collapse; font-size: 14px; } td { padding: 2px 10px 2px 0; }
+</style>
+</head>
+<body>
+<h1>BQ — test</h1>
+<p class="petit">Page de test : aucune donnée n'est envoyée nulle part. Les réglages restent dans ce téléphone.</p>
+
+<h2>1. Ce téléphone</h2>
+<table id="etat"></table>
+
+<h2>2. Mémoire de l'app</h2>
+<p class="petit">Ferme l'app, rouvre-la : le compteur doit continuer. Si il repart de 1, la mémoire est perdue.</p>
+<div id="memoire"></div>
+
+<h2>3. Connexion Gmail (lecture seule)</h2>
+<p class="petit">Expéditeur des alertes de ta banque (une partie de l'adresse suffit). Il reste dans ce téléphone.</p>
+<input id="expediteur" placeholder="expéditeur des alertes" autocapitalize="none" autocorrect="off" spellcheck="false">
+<p><button id="connexion">Se connecter à Gmail</button></p>
+<div id="gmail" class="info"></div>
+<div id="liste"></div>
+
+<h2>4. Export (données inventées)</h2>
+<p class="petit">Teste le fichier Excel et le CSV avec des opérations d'exemple. « Partager » ouvre la feuille de partage de l'iPhone ; « Télécharger » enregistre directement.</p>
+<p>
+  <button id="xlsx-partager">Excel : partager</button>
+  <button id="xlsx-telecharger" class="second">Excel : télécharger</button>
+</p>
+<p>
+  <button id="csv-partager">CSV : partager</button>
+  <button id="csv-telecharger" class="second">CSV : télécharger</button>
+</p>
+<div id="export" class="info"></div>
+
+<script src="config.js"></script>
+<script src="extraction.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script type="module" src="page.js"></script>
+</body>
+</html>

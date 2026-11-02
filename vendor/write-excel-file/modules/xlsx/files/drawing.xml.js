@@ -1,0 +1,26 @@
+import getAdditionalContent from '../helpers/features/getAdditionalContent.js';
+import transformContent from '../helpers/features/transformContent.js';
+
+// https://gitlab.com/catamphetamine/write-excel-file/-/blob/main/docs/IMAGES.md
+export default function generateDrawingXml(_ref) {
+  var sheetIndex = _ref.sheetIndex,
+    sheetId = _ref.sheetId,
+    sheetOptions = _ref.sheetOptions,
+    features = _ref.features;
+  var xml = DRAWING_XML_START +
+  // Apply any plugins that insert additional content to this XML.
+  getAdditionalContent('xl/drawings/drawing{id}.xml', features, sheetOptions, {
+    sheetIndex: sheetIndex,
+    sheetId: sheetId
+  }) + DRAWING_XML_END;
+
+  // Apply any plugins that transform this XML.
+  xml = transformContent(xml, 'xl/drawings/drawing{id}.xml', features, sheetOptions, {
+    sheetIndex: sheetIndex,
+    sheetId: sheetId
+  });
+  return xml;
+}
+export var DRAWING_XML_START = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">';
+export var DRAWING_XML_END = '</xdr:wsDr>';
+//# sourceMappingURL=drawing.xml.js.map
