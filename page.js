@@ -62,18 +62,11 @@ function texteDuMail(payload) {
 
 const euros = (c) => (c / 100).toFixed(2).replace('.', ',') + ' €';
 
-async function lireMails(jeton) {
-  const expediteur = $('expediteur').value.trim();
-  const recherche = expediteur ? 'from:' + expediteur : '';
-  dit('gmail', 'Lecture des mails…');
-  const trouves = await api('messages?maxResults=' + CONFIG.nombre + '&q=' + encodeURIComponent(recherche), jeton);
-  $('liste').textContent = '';
-  if (!trouves.messages) { dit('gmail', 'Connecté. Aucun mail trouvé pour cet expéditeur.', 'ok'); return; }
-  for (const m of trouves.messages) {
-    const d = await api('messages/' + m.id + '?format=full', jeton);
+// Affiche un message Gmail complet (même format qu'il vienne de Google ou du pont Apps Script).
+function afficherMessage(d) {
     const h = Object.fromEntries(d.payload.headers.map((x) => [x.name, x.value]));
     const texte = texteDuMail(d.payload);
-    const op = Extraction.extraireOperation({ id: m.id, objet: h.Subject || '', texte });
+    const op = Extraction.extraireOperation({ id: d.id, objet: h.Subject || '', texte });
     const bloc = document.createElement('div'); bloc.className = 'mail';
     const sujet = document.createElement('b'); sujet.textContent = h.Subject || '(sans objet)';
     const meta = document.createElement('span'); meta.className = 'petit'; meta.textContent = h.Date || '';
@@ -87,7 +80,16 @@ async function lireMails(jeton) {
     details.append(resume, pre);
     bloc.append(sujet, meta, res, details);
     $('liste').append(bloc);
-  }
+}
+
+async function lireMails(jeton) {
+  const expediteur = $('expediteur').value.trim();
+  const recherche = expediteur ? 'from:' + expediteur : '';
+  dit('gmail', 'Lecture des mails…');
+  const trouves = await api('messages?maxResults=' + CONFIG.nombre + '&q=' + encodeURIComponent(recherche), jeton);
+  $('liste').textContent = '';
+  if (!trouves.messages) { dit('gmail', 'Connecté. Aucun mail trouvé pour cet expéditeur.', 'ok'); return; }
+  for (const m of trouves.messages) afficherMessage(await api('messages/' + m.id + '?format=full', jeton));
   dit('gmail', 'Connecté. ' + trouves.messages.length + ' mail(s) lu(s).', 'ok');
 }
 
@@ -105,6 +107,30 @@ $('connexion').onclick = () => {
   });
   dit('gmail', 'Ouverture de la fenêtre Google…');
   client.requestAccessToken();
+};
+
+// ---- 3 bis. Pont Apps Script (sans connexion Google : l'adresse et la clé restent dans ce téléphone)
+$('pont-url').value = lireLocal('bq-pont-url') || '';
+$('pont-cle').value = lireLocal('bq-pont-cle') || '';
+$('pont-lire').onclick = async () => {
+  const url = $('pont-url').value.trim();
+  const cle = $('pont-cle').value.trim();
+  if (!url || !cle) { dit('pont', 'Renseigne l\'adresse du pont et la clé.', 'ko'); return; }
+  // La clé n'est jamais envoyée ailleurs que chez Google Apps Script.
+  if (!url.startsWith('https://script.google.com/macros/s/')) { dit('pont', 'L\'adresse doit commencer par https://script.google.com/macros/s/', 'ko'); return; }
+  ecrireLocal('bq-pont-url', url);
+  ecrireLocal('bq-pont-cle', cle);
+  try {
+    dit('pont', 'Lecture via le pont…');
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ cle, max: CONFIG.nombre }) });
+    const rep = await r.json();
+    if (rep.erreur) throw new Error(rep.erreur);
+    $('liste').textContent = '';
+    rep.messages.forEach(afficherMessage);
+    dit('pont', rep.messages.length + ' mail(s) lu(s) via le pont, sans connexion Google.', 'ok');
+  } catch (e) {
+    dit('pont', 'Pont : ' + e.message, 'ko');
+  }
 };
 
 // ---- 4. Export

@@ -54,6 +54,14 @@
 <input id="expediteur" placeholder="expéditeur des alertes" autocapitalize="none" autocorrect="off" spellcheck="false">
 <p><button id="connexion">Se connecter à Gmail</button></p>
 <div id="gmail" class="info"></div>
+
+<h2>3 bis. Pont Apps Script (sans connexion Google)</h2>
+<p class="petit">Adresse du pont et clé secrète : elles restent dans ce téléphone. L'expéditeur est réglé dans le script, pas ici.</p>
+<input id="pont-url" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="none" autocorrect="off" spellcheck="false">
+<input id="pont-cle" type="password" placeholder="clé secrète" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" style="margin-top:8px">
+<p><button id="pont-lire">Lire via le pont</button></p>
+<div id="pont" class="info"></div>
+
 <div id="liste"></div>
 
 <h2>4. Export (données inventées)</h2>
