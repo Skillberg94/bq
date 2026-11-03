@@ -6,21 +6,21 @@
 // rappel, saisies (texte des cases), dernier (dernière case tapée), valeurs (envoi d'une ligne touchée), ... }.
 // effet : ce que la page du navigateur doit faire elle-même (synchro, fichier, mot de passe…).
 
-import { lister, supprimer as supprimerLigne, modifier, nomAffiche, remettre, supprimerDefinitivement, corbeille } from './donnees.js?v=d47024da74e0';
+import { lister, supprimer as supprimerLigne, modifier, nomAffiche, remettre, supprimerDefinitivement, corbeille } from './donnees.js?v=b62e002258b7';
 const modifierLigne = modifier;
-import { soldes } from './soldes.js?v=d47024da74e0';
-import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=d47024da74e0';
-import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle } from './categories.js?v=d47024da74e0';
-import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=d47024da74e0';
-import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=d47024da74e0';
-import { attentes, estEnAttente } from './attentes.js?v=d47024da74e0';
-import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=d47024da74e0';
-import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=d47024da74e0';
-import { ajouterRegle, supprimerRegle } from './regles.js?v=d47024da74e0';
-import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenuAttendu, definirRevenuAttendu, entreesRetenues } from './reglages.js?v=d47024da74e0';
-import { enEuros, enCentimes } from './montants.js?v=d47024da74e0';
-import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=d47024da74e0';
-import { valeursAccueil, ajouterDepense, periodeSuivante } from './contrat-accueil.js?v=d47024da74e0';
+import { soldes } from './soldes.js?v=b62e002258b7';
+import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=b62e002258b7';
+import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle } from './categories.js?v=b62e002258b7';
+import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=b62e002258b7';
+import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=b62e002258b7';
+import { attentes, estEnAttente } from './attentes.js?v=b62e002258b7';
+import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=b62e002258b7';
+import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=b62e002258b7';
+import { ajouterRegle, supprimerRegle } from './regles.js?v=b62e002258b7';
+import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenuAttendu, definirRevenuAttendu, entreesRetenues } from './reglages.js?v=b62e002258b7';
+import { enEuros, enCentimes } from './montants.js?v=b62e002258b7';
+import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=b62e002258b7';
+import { valeursAccueil, ajouterDepense, periodeSuivante } from './contrat-accueil.js?v=b62e002258b7';
 
 export const PAGES = ['accueil', 'operations', 'categories', 'recurrents', 'seuils', 'objectifs', 'statistiques', 'soldes', 'sauvegarde', 'reglages'];
 
@@ -588,9 +588,9 @@ function aOperations(etat, ui, action, ctx) {
   const cat = action === 'categorie-choisie' ? null : PREFIXE_CATEGORIE(action, 'categorie-'); // « categorie-choisie » : choix de la fenêtre, pas un filtre
   if (cat) { const c = cat === 'toutes' ? 'toutes' : cat; return { ui: avec(ui, 'operations', { categorie: u.categorie === c ? 'toutes' : c }) }; }
   const id = u.touchee;
-  // Sans question (03/11/2026, choix du propriétaire, comme les applications connues) : la ligne va dans la corbeille
-  // (Réglages) et le message propose « Annuler » quelques secondes. vider : la fenêtre de la ligne se ferme.
-  if (action === 'supprimer-operation' && id) return { etat: supprimerLigne(etat, id, ctx.maintenant), ui: avec(ui, 'operations', { touchee: null }), message: 'Opération supprimée.', annuler: { action: 'annuler-suppression', id }, vider: [] };
+  // Une question au style de l'app (03/11/2026, choix du propriétaire), puis la ligne va dans la corbeille (Réglages) et
+  // le message propose encore « Annuler » quelques secondes. vider : la fenêtre de la ligne se ferme.
+  if (action === 'supprimer-operation' && id) return { etat: supprimerLigne(etat, id, ctx.maintenant), ui: avec(ui, 'operations', { touchee: null }), message: 'Opération supprimée.', annuler: { action: 'annuler-suppression', id }, confirmer: 'Supprimer cette opération ? Tu la retrouveras dans la corbeille (Réglages).', confirmerOui: 'Supprimer', vider: [] };
   if (action === 'rendre-recurrent' && id) {
     const l = lister(etat).find((x) => x.id === id);
     if (!l || l.sens !== 'sortie') throw new Error('Seule une dépense peut devenir un frais récurrent.');

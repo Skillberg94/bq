@@ -6,9 +6,9 @@
 //     (synchro, fichiers, mot de passe).
 // Les écrans ne sont présents que dans la version d'essai locale (site-essai/, node construire-site.mjs --essai) : sans
 // eux, demarrerEcrans rend null et la page provisoire reste affichée.
-import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=d47024da74e0';
-import { dateLocale } from './noyau/dates.js?v=d47024da74e0';
-import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=d47024da74e0';
+import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=b62e002258b7';
+import { dateLocale } from './noyau/dates.js?v=b62e002258b7';
+import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=b62e002258b7';
 
 const $ = (id) => document.getElementById(id);
 const VERSION = 'essai local · 3 nov. 2026';
@@ -17,10 +17,13 @@ const LIGNES_TOUCHEES = ['operation-touchee', 'categorie-touchee', 'emetteur-tou
 // Journal des boutons reçus dans la console, sur l'ordinateur seulement (essais).
 const JOURNAL = ['localhost', '127.0.0.1'].includes(location.hostname);
 
+// UX familière de Tool Design (lecteur version 2) : message et confirmation au style des écrans, fournis par le lecteur.
+let uxLecteur = null;
 let minuterie = null;
 // bouton (facultatif) : { libelle, faire } — un bouton dans le message, ex. « Annuler » après une suppression
 // (03/11/2026, comme les applications connues : pas de question, mais un moyen de revenir en arrière ; 5 secondes).
 export function direMessage(texte, erreur = false, bouton = null) {
+  if (uxLecteur && texte) return uxLecteur.message(texte, { error: erreur, ...(bouton && { button: { label: bouton.libelle, onPress: bouton.faire } }) });
   const e = $('ecrans-message');
   if (!e || !texte) return;
   e.textContent = texte;
@@ -50,44 +53,13 @@ export function demanderMotDePasse(titre) {
   });
 }
 
-/**
- * Zone des écrans à la hauteur de tout l'écran du téléphone (03/11/2026, captures du propriétaire sur iPhone) : dans
- * l'app ajoutée à l'écran d'accueil, Safari annonce une fenêtre plus courte de la hauteur de la barre d'état (47 pt
- * sur son iPhone) ; « plein écran » s'arrêtait donc avant le bas (bande noire) et le dessin, centré dans cette zone
- * trop courte, remontait sous l'heure. L'app ajoutée à l'écran d'accueil occupe toujours tout l'écran : on prend la
- * hauteur de l'écran. Dans le navigateur (ordinateur, Safari ordinaire), la hauteur de la fenêtre, comme avant.
- * Deuxième essai (capture suivante du propriétaire : la zone avait bien la hauteur de l'écran, mais son bas restait
- * caché) : Safari coupe les éléments « fixes » à sa fenêtre trop courte. La zone est donc posée dans la page
- * (position absolue), et la page elle-même prend la hauteur de l'écran.
- * Seulement sur l'iPhone (navigator.standalone n'existe que là) : sur Android (03/11/2026, « ça ne va pas du tout »), la
- * barre de l'heure et la barre de navigation prennent leur place hors de la page ; la hauteur de tout l'écran faisait
- * passer le bas du dessin sous la barre de navigation. Android donne la bonne hauteur : celle de la fenêtre.
- */
-function calerSurEcran(zone) {
-  const caler = () => {
-    const seule = navigator.standalone === true;
-    const debout = innerHeight >= innerWidth;
-    const [petit, grand] = [Math.min(screen.width, screen.height), Math.max(screen.width, screen.height)];
-    const ecran = debout ? { l: petit, h: grand } : { l: grand, h: petit };
-    // Seulement quand l'app prend toute la largeur de l'écran (pas une fenêtre réduite sur tablette).
-    const toutEcran = seule && Math.abs(innerWidth - ecran.l) <= 2;
-    const hauteur = (toutEcran ? Math.max(innerHeight, ecran.h) : innerHeight) + 'px';
-    for (const e of [document.documentElement, document.body]) e.style.height = hauteur;
-    zone.style.position = 'absolute';
-    zone.style.bottom = 'auto';
-    zone.style.height = hauteur;
-    scrollTo(0, 0);
-  };
-  caler();
-  addEventListener('resize', caler);
-  addEventListener('orientationchange', () => setTimeout(caler, 300));
-}
 
 /**
  * Petite fenêtre « Oui / Annuler » de l'app, à la place de la confirmation du navigateur (confirm) : celle-ci ne
  * s'affiche pas partout (refusée sans rien montrer dans certains navigateurs) et ne ressemble pas à l'app.
  */
 export function demanderConfirmation(texte, oui = 'Oui') {
+  if (uxLecteur) return uxLecteur.confirmer(texte, oui);
   return new Promise((ok) => {
     // Espace insécable avant « ? ! : ; » : la ponctuation ne passe jamais seule à la ligne.
     $('ecrans-confirmation-texte').textContent = texte.replace(/ ([?!:;])/g, ' $1');
@@ -138,6 +110,7 @@ export async function demarrerEcrans(app) {
     };
   }
   const lecteur = await app.lecteur();
+  if (lecteur.message && lecteur.confirmer) uxLecteur = lecteur;
   // Les autres écrans se chargent pendant qu'on regarde l'accueil (changement de page sans attente).
   const prechargement = () => PAGES.forEach((p) => lireDesign(p).catch(() => {}));
 
@@ -146,7 +119,6 @@ export async function demarrerEcrans(app) {
   $('app').hidden = true;
   zone.hidden = false;
   document.body.classList.add('avec-ecrans');
-  calerSurEcran(zone);
 
   let page = 'accueil';
   let ui = uiDepart(dateLocale(Date.now()));
@@ -155,8 +127,6 @@ export async function demarrerEcrans(app) {
   let erreurs = {};
   let vue = null;
   let occupe = false;
-  // Hauteur du clavier du téléphone quand il est ouvert (pixels), 0 sinon.
-  let clavier = 0;
   // Nombre de demandes « vider les cases » envoyées au lecteur.
   let vidages = 0;
 
@@ -167,61 +137,11 @@ export async function demarrerEcrans(app) {
   });
   const valeurs = () => {
     const v = valeursEcran(page, app.etat(), ui, contexte());
-    return { linkVariables: v.linkVariables, gaugeValues: v.gaugeValues, chartData: v.chartData, inputStates: erreurs, buttonStates: v.buttonStates, appPicks: v.appPicks, keyboardInset: clavier };
+    return { linkVariables: v.linkVariables, gaugeValues: v.gaugeValues, chartData: v.chartData, inputStates: erreurs, buttonStates: v.buttonStates, appPicks: v.appPicks };
   };
   const rafraichir = () => vue?.mettreAJour(valeurs());
 
-  // Menu latéral au glissé, comme les applications connues (demande du propriétaire, 03/11/2026) : un glissé vers la
-  // droite l'ouvre, vers la gauche le range. Le glissé doit être net (au moins 70 px, deux fois plus horizontal que
-  // vertical, en moins de 0,7 s) : un défilement de haut en bas ne l'ouvre jamais. L'écran reçoit un événement
-  // (« ouvrir-menu », « fermer-menu ») auquel répond le logo de l'en-tête.
-  let evenements = 0;
-  let glisse = null;
-  zone.addEventListener('touchstart', (e) => {
-    const t = e.touches[0];
-    glisse = e.touches.length === 1 && t ? { x: t.clientX, y: t.clientY, at: Date.now() } : null;
-  }, { passive: true, capture: true });
-  // Reconnu pendant que le doigt bouge, sans attendre qu'il se lève : l'iPhone interrompt souvent un geste parti près
-  // du bord de l'écran (fin du toucher jamais reçue ; le glissé ne marchait pas sur l'iPhone du propriétaire).
-  zone.addEventListener('touchmove', (e) => {
-    const t = e.touches[0];
-    const g = glisse;
-    if (!g || g.envoye || !t || !vue || e.touches.length !== 1) return;
-    if (Date.now() - g.at > 700) { glisse = null; return; }
-    const dx = t.clientX - g.x;
-    const dy = t.clientY - g.y;
-    if (Math.abs(dx) < 70 || Math.abs(dx) < 2 * Math.abs(dy)) return;
-    g.envoye = true;
-    vue.mettreAJour({ linkEvent: { name: dx > 0 ? 'ouvrir-menu' : 'fermer-menu', times: ++evenements } });
-  }, { passive: true, capture: true });
-  const finGlisse = () => { glisse = null; };
-  zone.addEventListener('touchend', finGlisse, { passive: true, capture: true });
-  zone.addEventListener('touchcancel', finGlisse, { passive: true, capture: true });
-
-  // Clavier ouvert (03/11/2026, « pouvoir encore monter et descendre quand je saisis, même sur un écran sans
-  // défilement ») : l'écran peut défiler de la hauteur du clavier, comme dans les applications du téléphone. La fenêtre
-  // visible rétrécit quand le clavier s'ouvre ; moins de 80 px d'écart : pas de clavier (barre du navigateur).
-  // L'iPhone, lui, fait remonter toute la page pour montrer la case (et on ne pouvait plus la bouger) : ce décalage
-  // (visualViewport.offsetTop) est compensé, la page reste à sa place et c'est le lecteur qui remonte la case au-dessus
-  // du clavier et laisse défiler l'écran.
-  if (window.visualViewport) {
-    // iPhone (03/11/2026, « seule la moitié de l'écran défile avec le clavier ») : l'iPhone fait remonter la page de deux
-    // façons (la partie visible glisse, et parfois la page elle-même défile) : les deux sont compensées (pageTop). Et
-    // la hauteur cachée par le clavier se mesure sur la zone des écrans elle-même (sur l'iPhone, elle est plus haute que
-    // la fenêtre annoncée). Sur Android rien ne change : la page ne bouge pas et la zone a la hauteur de la fenêtre.
-    const mesurer = () => {
-      const decale = Math.round(visualViewport.pageTop ?? visualViewport.offsetTop + scrollY);
-      zone.style.transform = decale > 0 ? `translateY(${decale}px)` : '';
-      const ecart = Math.round(zone.getBoundingClientRect().height - visualViewport.height);
-      const h = ecart >= 80 ? ecart : 0;
-      if (h === clavier) return;
-      clavier = h;
-      vue?.mettreAJour({ keyboardInset: clavier });
-    };
-    visualViewport.addEventListener('resize', mesurer);
-    visualViewport.addEventListener('scroll', mesurer);
-    addEventListener('scroll', mesurer);
-  }
+  // Glissé du menu, clavier et hauteur de l'écran : faits par le lecteur (UX familière de Tool Design).
 
   // Changement de page : le même lecteur reçoit le nouveau dessin (plus rapide que de tout refaire). « remonter » refait
   // le lecteur : c'est le seul moyen de vider les cases et de refermer les fenêtres de l'écran.

@@ -10,8 +10,8 @@
 // État : objectifs: [{ id, nom, icone, cibleCentimes, date, part (0-100, actuelle), cree: 'AAAA-MM',
 //                     parts?: [{ depuis: 'AAAA-MM', part }] }]
 
-import { lister } from './donnees.js?v=d47024da74e0';
-import { ajouterMois, moisDe } from './dates.js?v=d47024da74e0';
+import { lister } from './donnees.js?v=b62e002258b7';
+import { ajouterMois, moisDe } from './dates.js?v=b62e002258b7';
 
 const estDepense = (l) => !l.supprime && l.sens === 'sortie' && !l.retrait;
 const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
