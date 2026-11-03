@@ -6,9 +6,9 @@
 //     (synchro, fichiers, mot de passe).
 // Les écrans ne sont présents que dans la version d'essai locale (site-essai/, node construire-site.mjs --essai) : sans
 // eux, demarrerEcrans rend null et la page provisoire reste affichée.
-import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=acd44948f510';
-import { dateLocale } from './noyau/dates.js?v=acd44948f510';
-import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=acd44948f510';
+import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=448471bd735c';
+import { dateLocale } from './noyau/dates.js?v=448471bd735c';
+import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=448471bd735c';
 
 const $ = (id) => document.getElementById(id);
 const VERSION = 'essai local · 3 nov. 2026';
@@ -50,10 +50,13 @@ export function demanderMotDePasse(titre) {
  * Deuxième essai (capture suivante du propriétaire : la zone avait bien la hauteur de l'écran, mais son bas restait
  * caché) : Safari coupe les éléments « fixes » à sa fenêtre trop courte. La zone est donc posée dans la page
  * (position absolue), et la page elle-même prend la hauteur de l'écran.
+ * Seulement sur l'iPhone (navigator.standalone n'existe que là) : sur Android (03/11/2026, « ça ne va pas du tout »), la
+ * barre de l'heure et la barre de navigation prennent leur place hors de la page ; la hauteur de tout l'écran faisait
+ * passer le bas du dessin sous la barre de navigation. Android donne la bonne hauteur : celle de la fenêtre.
  */
 function calerSurEcran(zone) {
   const caler = () => {
-    const seule = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+    const seule = navigator.standalone === true;
     const debout = innerHeight >= innerWidth;
     const [petit, grand] = [Math.min(screen.width, screen.height), Math.max(screen.width, screen.height)];
     const ecran = debout ? { l: petit, h: grand } : { l: grand, h: petit };

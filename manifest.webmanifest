@@ -3,6 +3,7 @@
   "short_name": "BQ",
   "start_url": "./",
   "scope": "./",
+  "display_override": ["fullscreen"],
   "display": "standalone",
   "background_color": "#0f1218",
   "theme_color": "#0f1218",
