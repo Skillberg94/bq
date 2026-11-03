@@ -6,21 +6,21 @@
 // rappel, saisies (texte des cases), dernier (dernière case tapée), valeurs (envoi d'une ligne touchée), ... }.
 // effet : ce que la page du navigateur doit faire elle-même (synchro, fichier, mot de passe…).
 
-import { lister, supprimer as supprimerLigne, modifier, nomAffiche, remettre, supprimerDefinitivement, corbeille } from './donnees.js?v=608bfef3efde';
+import { lister, supprimer as supprimerLigne, modifier, nomAffiche, remettre, supprimerDefinitivement, corbeille } from './donnees.js?v=9ab598d26bbd';
 const modifierLigne = modifier;
-import { soldes } from './soldes.js?v=608bfef3efde';
-import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=608bfef3efde';
-import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle } from './categories.js?v=608bfef3efde';
-import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=608bfef3efde';
-import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=608bfef3efde';
-import { attentes, estEnAttente } from './attentes.js?v=608bfef3efde';
-import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=608bfef3efde';
-import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=608bfef3efde';
-import { ajouterRegle, supprimerRegle } from './regles.js?v=608bfef3efde';
-import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenuAttendu, definirRevenuAttendu, entreesRetenues } from './reglages.js?v=608bfef3efde';
-import { enEuros, enCentimes } from './montants.js?v=608bfef3efde';
-import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=608bfef3efde';
-import { valeursAccueil, ajouterDepense, periodeSuivante, avantSoldeDepart, MENTION_AVANT } from './contrat-accueil.js?v=608bfef3efde';
+import { soldes } from './soldes.js?v=9ab598d26bbd';
+import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=9ab598d26bbd';
+import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle, ENTREES, nomEntrees, modifierEntrees } from './categories.js?v=9ab598d26bbd';
+import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=9ab598d26bbd';
+import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=9ab598d26bbd';
+import { attentes, estEnAttente } from './attentes.js?v=9ab598d26bbd';
+import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=9ab598d26bbd';
+import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=9ab598d26bbd';
+import { ajouterRegle, supprimerRegle } from './regles.js?v=9ab598d26bbd';
+import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenus, revenusDuMois, ajouterRevenu, modifierRevenu, supprimerRevenu, entreesRetenues } from './reglages.js?v=9ab598d26bbd';
+import { enEuros, enCentimes } from './montants.js?v=9ab598d26bbd';
+import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=9ab598d26bbd';
+import { valeursAccueil, ajouterDepense, periodeSuivante, avantSoldeDepart, MENTION_AVANT } from './contrat-accueil.js?v=9ab598d26bbd';
 
 export const PAGES = ['accueil', 'operations', 'categories', 'recurrents', 'seuils', 'objectifs', 'statistiques', 'soldes', 'sauvegarde', 'reglages'];
 
@@ -99,7 +99,7 @@ function typeLigne(l) {
 }
 const enJJMMAAAA = (d) => d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4);
 /** Nom de l'icône d'une ligne (03/11/2026 : les écrans choisissent l'image d'après {icone}). */
-const iconeLigne = (etat, l) => (l.sens !== 'sortie' ? 'virement' : l.retrait ? 'retrait' : iconeCategorie(etat, l.categorie));
+const iconeLigne = (etat, l) => (l.sens !== 'sortie' ? iconeCategorie(etat, ENTREES) : l.retrait ? 'retrait' : iconeCategorie(etat, l.categorie));
 function ligneOperation(etat, l) {
   return {
     id: l.id,
@@ -216,13 +216,14 @@ function vCategories(etat, ui, ctx) {
   })).sort((a, b) => a.emetteur.localeCompare(b.emetteur, 'fr'));
   return { linkVariables: {
     'a-classer': aClasserLignes.map((l) => ({ id: l.id, libelle: nomAffiche(l), date: dateLongue(l.date), montant: signe(-l.centimes), sens: 'depense' })),
-    categories: etat.categories.map((c) => {
-      const du = lignes.filter((l) => l.sens === 'sortie' && !l.retrait && l.categorie === c.id);
+    // En tête : « Entrées d'argent » (toutes les entrées) ; puis les catégories de dépenses.
+    categories: [{ id: ENTREES, nom: nomEntrees(etat), filtre: (l) => l.sens === 'entree' }, ...etat.categories.map((c) => ({ id: c.id, nom: c.nom, filtre: (l) => l.sens === 'sortie' && !l.retrait && l.categorie === c.id }))].map((c) => {
+      const du = lignes.filter(c.filtre);
       return { id: c.id, nom: c.nom, icone: iconeCategorie(etat, c.id), nombre: String(du.length),
         depense: euros(du.filter((l) => l.date >= mois.debut && l.date <= mois.fin).reduce((s, l) => s + l.centimes, 0)) };
     }),
     emetteurs,
-  } };
+  }, buttonStates: ui.categories.touchee === ENTREES ? { 'demander-suppression': 'disabled' } : {} };
 }
 
 // Frais ramenés au mois : 4 semaines -> × 13 / 12 (52 semaines par an).
@@ -236,7 +237,8 @@ function economieDuMois(etat, aujourdhui) {
   const totalFrais = etat.recurrents.reduce((s, r) => s + parMois(r), 0);
   const seuil = seuilPour(etat, 'mois', aujourdhui) ?? 0;
   // Revenu attendu (Réglages) tant que le vrai salaire n'est pas arrivé.
-  const { centimes: entrees, prevu: entreesPrevues } = entreesRetenues(etat, bilanDuMois(etat, moisDe(aujourdhui)).entrees);
+  const mois = moisDe(aujourdhui);
+  const { centimes: entrees, prevu: entreesPrevues } = entreesRetenues(etat, bilanDuMois(etat, mois).entrees, mois, lister(etat).filter((l) => !l.supprime && l.sens === 'entree'));
   return { totalFrais, seuil, entrees, entreesPrevues, prevu: seuil + totalFrais, economie: entrees - seuil - totalFrais };
 }
 
@@ -456,7 +458,13 @@ function vReglages(etat, ui, ctx) {
     })),
     'corbeille-info': corbeille(etat).length ? 'Remets une opération dans la liste, ou supprime-la pour de bon.' : 'La corbeille est vide.',
     version: ctx.version ?? '',
-    'revenu-attendu': revenuAttendu(etat) ? euros(revenuAttendu(etat)) + ' par mois' : 'non réglé',
+    // Revenus attendus (03/11/2026) : une ligne par revenu ; le détail dit combien et s'il est déjà arrivé ce mois-ci.
+    revenus: revenusDuMois(etat, moisDe(ctx.aujourdhui), lister(etat).filter((l) => !l.supprime && l.sens === 'entree')).map(({ revenu: r, attendu, recu }) => ({
+      id: r.id, nom: r.nom,
+      detail: (r.unite === 'jour' ? euros(r.centimes) + ' par jour · ' + euros(attendu) + ' ce mois' : euros(r.centimes) + ' par mois') + ' · ' + (recu ? 'arrivé le ' + jourMois(recu.date) : 'attendu'),
+      'revenu-nom': r.nom, 'revenu-montant': euros(r.centimes).replace(' €', ''), 'revenu-libelle': r.libelle,
+    })),
+    'revenus-info': revenus(etat).length ? 'Touche un revenu pour le modifier ou le supprimer.' : 'Aucun revenu : ajoute ton salaire, France Travail…',
   } };
 }
 
@@ -495,7 +503,12 @@ export function choixCoches(page, etat, ui) {
   if (page === 'accueil') return ['mode-' + (ui.accueil.saisieMode ?? 'especes')];
   if (page === 'seuils') return ['alerte-' + niveauAlerte(etat)];
   if (page === 'sauvegarde') return ['rappel-' + (rappelJours(etat) ?? 'jamais'), 'export-periode-' + ui.sauvegarde.exportPeriode];
-  if (page === 'reglages') return ['regle-champ-' + (ui.reglages.champRegle ?? 'tous')];
+  if (page === 'reglages') {
+    const u = ui.reglages;
+    const r = revenus(etat).find((x) => x.id === u.revenu);
+    return ['regle-champ-' + (u.champRegle ?? 'tous'), 'nouveau-revenu-unite-' + (u.nouveauUnite ?? 'mois'), 'nouveau-revenu-reperage-' + (u.nouveauReperage ?? 'montant'),
+      ...(r ? ['revenu-unite-' + (u.revenuUnite ?? r.unite), 'revenu-reperage-' + (u.revenuReperage ?? r.reperage)] : [])];
+  }
   if (page === 'recurrents') {
     const u = ui.recurrents;
     const r = etat.recurrents.find((x) => x.id === u.touche);
@@ -529,7 +542,7 @@ export function uiDepart(aujourdhui) {
     objectifs: { touche: null, icone: null, nouvelleIcone: 'diamant', fenetre: null },
     soldes: { compte: 'banque' },
     sauvegarde: { exportPeriode: 'tout' },
-    reglages: { champRegle: 'tous' },
+    reglages: { champRegle: 'tous', revenu: null, revenuUnite: undefined, revenuReperage: undefined, nouveauUnite: 'mois', nouveauReperage: 'montant' },
   };
 }
 
@@ -548,11 +561,11 @@ export function uiPageOuverte(page, ui, aujourdhui) {
 
 export function casesDeLaLigne(page, etat, ui, id, ctx) {
   const v = valeursEcran(page, etat, ui, ctx).linkVariables;
-  const listes = { seuils: 'seuils-categories', categories: 'categories', recurrents: 'recurrents', objectifs: 'objectifs', operations: 'operations', accueil: 'operations' };
+  const listes = { reglages: 'revenus', seuils: 'seuils-categories', categories: 'categories', recurrents: 'recurrents', objectifs: 'objectifs', operations: 'operations', accueil: 'operations' };
   const ligne = [...(v[listes[page]] ?? []), ...(page === 'operations' ? v['operations-recentes'] : [])].find((l) => l.id === id);
   if (!ligne) return {};
   if (page === 'categories') return { nom: ligne.nom };
-  return Object.fromEntries(Object.entries(ligne).filter(([k]) => /^(seuil-categorie|frais-|objectif-|modif-)/.test(k)));
+  return Object.fromEntries(Object.entries(ligne).filter(([k]) => /^(seuil-categorie|frais-|objectif-|modif-|revenu-)/.test(k)));
 }
 
 // =====================================================================================================================
@@ -681,6 +694,7 @@ function aCategories(etat, ui, action, ctx) {
   // Abonnement ») : Opérations s'ouvre sur cette catégorie, depuis le début. Le bouton « Modifier » de la ligne ouvre la fenêtre.
   if (action === 'voir-categorie') {
     const c = ctx.valeurs.id;
+    if (c === ENTREES) return { ui: avec(ui, 'operations', { categorie: 'toutes', type: 'entrees', periode: { type: 'tout', repere: ctx.aujourdhui }, touchee: null, depuisCategorie: true }), aller: 'operations' };
     if (!etat.categories.some((x) => x.id === c)) throw new Error('Catégorie introuvable.');
     return { ui: avec(ui, 'operations', { categorie: c, type: 'tout', periode: { type: 'tout', repere: ctx.aujourdhui }, touchee: null, depuisCategorie: true }), aller: 'operations' };
   }
@@ -691,8 +705,10 @@ function aCategories(etat, ui, action, ctx) {
   if (action === 'enregistrer-categorie' && u.touchee) {
     const nom = String(ctx.saisies.nom ?? '').trim();
     if (!nom) throw new Error('Le nom de la catégorie est vide.');
+    if (u.touchee === ENTREES) return { etat: modifierEntrees(etat, { nom, ...(u.icone && { logo: u.icone }) }), message: 'Catégorie enregistrée.' };
     return { etat: modifierCategorie(etat, u.touchee, { nom, ...(u.icone && { logo: u.icone }) }), message: 'Catégorie enregistrée.' };
   }
+  if (action === 'supprimer-categorie' && u.touchee === ENTREES) throw new Error('« ' + nomEntrees(etat) + ' » ne se supprime pas (son nom et son logo se changent).');
   if (action === 'supprimer-categorie' && u.touchee) return { etat: supprimerCategorie(etat, u.touchee), ui: avec(ui, 'categories', { touchee: null }), message: 'Catégorie supprimée : ses dépenses repassent « à classer ».' };
   if (action === 'creer-categorie') {
     const nom = String(ctx.saisies['nouvelle-nom'] ?? '').trim();
@@ -821,11 +837,27 @@ function aReglages(etat, ui, action, ctx) {
   }
   if (action === 'supprimer-ignore' && ctx.valeurs?.id) return { etat: supprimerIgnore(etat, ctx.valeurs.id), message: 'Libellé retiré de la liste.', confirmer: 'Retirer ce libellé de la liste ? Ses mails compteront de nouveau.', confirmerOui: 'Retirer' };
   if (action === 'supprimer-regle' || action === 'supprimer-ignore') return {}; // le bouton : l'envoi avec la ligne suit
-  if (action === 'enregistrer-revenu') {
-    const c = montant(ctx.saisies['revenu-attendu'], 'revenu');
-    if (c !== null && c <= 0) throw new Error('Le revenu attendu doit être un montant positif.');
-    return { etat: definirRevenuAttendu(etat, c), message: c === null ? 'Revenu attendu retiré.' : 'Revenu attendu : ' + euros(c) + ' par mois.', vider: ['revenu-attendu'] };
+  // Revenus attendus : fenêtre « Nouveau revenu » (nouveau-revenu-…) et fenêtre d'un revenu touché (revenu-…), comme les
+  // frais récurrents. Par mois / par jour ; repéré au montant, au mot du virement, ou aux deux.
+  const u = ui.reglages;
+  if (action === 'revenu-touche') return { ui: avec(ui, 'reglages', { revenu: ctx.valeurs.id, revenuUnite: undefined, revenuReperage: undefined }) };
+  for (const [prefixe, champ, valeurs] of [['revenu-unite-', 'revenuUnite', ['mois', 'jour']], ['revenu-reperage-', 'revenuReperage', ['montant', 'libelle', 'les-deux']], ['nouveau-revenu-unite-', 'nouveauUnite', ['mois', 'jour']], ['nouveau-revenu-reperage-', 'nouveauReperage', ['montant', 'libelle', 'les-deux']]]) {
+    const v = PREFIXE_CATEGORIE(action, prefixe);
+    if (v && valeurs.includes(v)) return { ui: avec(ui, 'reglages', { [champ]: v }) };
   }
+  const lireRevenu = (prefixe) => ({
+    nom: ctx.saisies[prefixe + 'nom'], libelle: ctx.saisies[prefixe + 'libelle'],
+    centimes: montant(ctx.saisies[prefixe + 'montant']) ?? undefined,
+  });
+  if (action === 'creer-revenu') {
+    const r = ajouterRevenu(etat, { ...lireRevenu('nouveau-revenu-'), unite: u.nouveauUnite ?? 'mois', reperage: u.nouveauReperage ?? 'montant' });
+    return { etat: r.etat, ui: avec(ui, 'reglages', { nouveauUnite: 'mois', nouveauReperage: 'montant' }), message: 'Revenu ajouté.', vider: ['nouveau-revenu-nom', 'nouveau-revenu-montant', 'nouveau-revenu-libelle'] };
+  }
+  if (action === 'enregistrer-revenu' && u.revenu) {
+    const champs = lireRevenu('revenu-');
+    return { etat: modifierRevenu(etat, u.revenu, { ...champs, ...(u.revenuUnite && { unite: u.revenuUnite }), ...(u.revenuReperage && { reperage: u.revenuReperage }) }), message: 'Revenu enregistré.', vider: [] };
+  }
+  if (action === 'supprimer-revenu' && u.revenu) return { etat: supprimerRevenu(etat, u.revenu), ui: avec(ui, 'reglages', { revenu: null }), message: 'Revenu supprimé.', confirmer: 'Supprimer ce revenu attendu ?', confirmerOui: 'Supprimer', vider: [] };
   if (action === 'verrouiller') return { effet: { type: 'verrouiller' } };
   if (action === 'changer-mot-de-passe') return { effet: { type: 'changer-mot-de-passe' } };
   return null;

@@ -4,11 +4,11 @@
 // - actions : ce que l'app fait quand l'écran lui envoie une action (ajouter-depense, basculer-banque, changer-periode).
 // Aucun calcul de placement ici : l'écran (Tool Design) décide de tout l'affichage.
 
-import { soldes, lister, ajouterManuel, nomAffiche } from './donnees.js?v=608bfef3efde';
-import { jauge } from './seuils.js?v=608bfef3efde';
-import { aClasser, iconeCategorie } from './categories.js?v=608bfef3efde';
-import { attentes, estEnAttente } from './attentes.js?v=608bfef3efde';
-import { enEuros, enCentimes } from './montants.js?v=608bfef3efde';
+import { soldes, lister, ajouterManuel, nomAffiche } from './donnees.js?v=9ab598d26bbd';
+import { jauge } from './seuils.js?v=9ab598d26bbd';
+import { aClasser, iconeCategorie } from './categories.js?v=9ab598d26bbd';
+import { attentes, estEnAttente } from './attentes.js?v=9ab598d26bbd';
+import { enEuros, enCentimes } from './montants.js?v=9ab598d26bbd';
 
 // Ligne qui ne compte pas dans le solde parce qu'elle est d'avant le solde de référence (déjà incluse dans le solde
 // recopié de la banque) : la date le dit (03/11/2026, terme choisi par le propriétaire).

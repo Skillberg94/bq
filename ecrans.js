@@ -6,14 +6,14 @@
 //     (synchro, fichiers, mot de passe).
 // Les écrans ne sont présents que dans la version d'essai locale (site-essai/, node construire-site.mjs --essai) : sans
 // eux, demarrerEcrans rend null et la page provisoire reste affichée.
-import { valeursEcran, agir, uiDepart, uiPageOuverte, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=608bfef3efde';
-import { dateLocale } from './noyau/dates.js?v=608bfef3efde';
-import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=608bfef3efde';
+import { valeursEcran, agir, uiDepart, uiPageOuverte, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=9ab598d26bbd';
+import { dateLocale } from './noyau/dates.js?v=9ab598d26bbd';
+import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=9ab598d26bbd';
 
 const $ = (id) => document.getElementById(id);
 const VERSION = 'essai local · 3 nov. 2026';
 // Envois des lignes touchées : l'app retient la ligne et le texte de départ des cases de la fenêtre qui s'ouvre.
-const LIGNES_TOUCHEES = ['operation-touchee', 'categorie-touchee', 'emetteur-touche', 'frais-touche', 'objectif-touche'];
+const LIGNES_TOUCHEES = ['operation-touchee', 'categorie-touchee', 'emetteur-touche', 'frais-touche', 'objectif-touche', 'revenu-touche'];
 // Journal des boutons reçus dans la console, sur l'ordinateur seulement (essais).
 const JOURNAL = ['localhost', '127.0.0.1'].includes(location.hostname);
 

@@ -3,9 +3,9 @@
 // Règle : la catégorie d'une ligne = celle choisie sur la ligne, sinon celle retenue pour son libellé.
 // Classer un émetteur reclasse donc aussi ses anciennes lignes (sauf celles où une catégorie a été choisie à la main).
 
-import { effective, estRetrait } from './soldes.js?v=608bfef3efde';
-import { normaliserLibelle } from './libelles.js?v=608bfef3efde';
-import { recurrentDe } from './recurrents.js?v=608bfef3efde';
+import { effective, estRetrait } from './soldes.js?v=9ab598d26bbd';
+import { normaliserLibelle } from './libelles.js?v=9ab598d26bbd';
+import { recurrentDe } from './recurrents.js?v=9ab598d26bbd';
 
 export { normaliserLibelle };
 
@@ -21,8 +21,18 @@ const ICONES_DEPART = {
   courses: 'shopping', restauration: 'restaurant', logement: 'logement', transport: 'transport', abonnements: 'forfait',
   sante: 'sante', loisirs: 'sport', shopping: 'shopping', 'frais-et-administratif': 'frais-administratif', autre: 'autre',
 };
+// « Entrées d'argent » (demande du propriétaire, 03/11/2026) : en tête de « Mes catégories », pour voir toutes les entrées ;
+// son nom et son logo se changent, elle ne se supprime pas. Ce n'est pas une catégorie de dépenses (elle n'est pas dans
+// etat.categories) : reglages.nomEntrees / logoEntrees.
+export const ENTREES = 'entrees';
+export const nomEntrees = (etat) => etat.reglages?.nomEntrees ?? "Entrées d'argent";
+export function modifierEntrees(etat, { nom, logo }) {
+  return { ...etat, reglages: { ...(etat.reglages ?? {}), ...(nom !== undefined && { nomEntrees: nom.trim() }), ...(logo !== undefined && { logoEntrees: logo }) } };
+}
+
 export function iconeCategorie(etat, id) {
   if (id === null || id === undefined || id === 'a-classer') return 'a-classe';
+  if (id === ENTREES) return etat.reglages?.logoEntrees ?? 'virement';
   return etat.categories.find((c) => c.id === id)?.logo ?? ICONES_DEPART[id] ?? 'autre';
 }
 

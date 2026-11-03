@@ -7,10 +7,11 @@
 // État : corrections: [{ id, compte, ts, ancien (centimes ou null), nouveau }], libellesIgnores: [{ id, texte }],
 //        reglages: { rappelJours?: number | null }
 
-import { definirReference, soldes } from './donnees.js?v=608bfef3efde';
-import { normaliserLibelle } from './libelles.js?v=608bfef3efde';
-import { effective } from './soldes.js?v=608bfef3efde';
-import { RAPPEL_JOURS } from './sauvegarde.js?v=608bfef3efde';
+import { definirReference, soldes } from './donnees.js?v=9ab598d26bbd';
+import { normaliserLibelle } from './libelles.js?v=9ab598d26bbd';
+import { ajouterMois, joursDuMois, moisDe } from './dates.js?v=9ab598d26bbd';
+import { effective } from './soldes.js?v=9ab598d26bbd';
+import { RAPPEL_JOURS } from './sauvegarde.js?v=9ab598d26bbd';
 
 export const IGNORES_DEPART = [{ id: 'i-cpt-depot', texte: 'VIR VERS CPT DEPOT PART' }, { id: 'i-livret-a', texte: 'VIR VERS LIVRET A' }];
 export const RAPPELS = [3, 7, 14, 30, null];
@@ -58,21 +59,81 @@ export function estIgnore(etat, libelle) {
   return libellesIgnores(etat).some((x) => contient(libelle, x.texte));
 }
 
-// Revenu attendu par mois (demande du propriétaire, 03/11/2026) : sert à estimer l'économie du mois tant que le vrai
-// salaire n'est pas arrivé (voir entreesRetenues).
-export const revenuAttendu = (etat) => etat.reglages?.revenuAttendu ?? null;
-export function definirRevenuAttendu(etat, centimes) {
-  if (centimes !== null && (!Number.isInteger(centimes) || centimes <= 0)) throw new Error('Le revenu attendu doit être un montant positif.');
-  return { ...etat, reglages: { ...(etat.reglages ?? {}), revenuAttendu: centimes } };
+// Revenus attendus (demande du propriétaire, 03/11/2026 : d'abord un seul « revenu attendu par mois », puis « pouvoir en
+// ajouter plusieurs si on a plusieurs travails, les modifier, les supprimer » ; France Travail paie « une somme par jour »,
+// sur « le nombre de jours du mois précédent »). Ils servent à estimer l'économie du mois tant qu'ils ne sont pas arrivés.
+// Chaque revenu : { id, nom, centimes, unite: 'mois' | 'jour', reperage: 'montant' | 'libelle' | 'les-deux', libelle }.
+// Repérage (choisi à la saisie, demande du propriétaire) : il est arrivé dès qu'une entrée du mois a le bon montant (à
+// TOLERANCE_REVENU près), contient le mot du virement, ou les deux à la fois.
+export const UNITES_REVENU = ['mois', 'jour'];
+export const REPERAGES_REVENU = ['montant', 'libelle', 'les-deux'];
+export const TOLERANCE_REVENU = 0.1;
+
+/** Les revenus ; un ancien « revenu attendu » unique (avant le 03/11/2026) devient le premier, repéré au montant. */
+export function revenus(etat) {
+  if (etat.reglages?.revenus) return etat.reglages.revenus;
+  const ancien = etat.reglages?.revenuAttendu;
+  return ancien ? [{ id: 'rev1', nom: 'Revenu', centimes: ancien, unite: 'mois', reperage: 'montant', libelle: '' }] : [];
+}
+function verifierRevenu({ nom, centimes, unite, reperage, libelle }) {
+  const r = { nom: String(nom ?? '').trim(), centimes, unite: unite ?? 'mois', reperage: reperage ?? 'montant', libelle: String(libelle ?? '').trim() };
+  if (!r.nom) throw new Error('Donne un nom au revenu (exemple : Salaire, France Travail).');
+  if (!Number.isInteger(r.centimes) || r.centimes <= 0) throw new Error('Tape le montant du revenu (exemple : 1 850 ou 38,50).');
+  if (!UNITES_REVENU.includes(r.unite)) throw new Error('unité de revenu invalide');
+  if (!REPERAGES_REVENU.includes(r.reperage)) throw new Error('repérage de revenu invalide');
+  if (r.reperage !== 'montant' && !r.libelle) throw new Error('Tape le mot du virement (exemple : FRANCE TRAVAIL), ou choisis « Montant ».');
+  return r;
+}
+const avecRevenus = (etat, liste) => {
+  const { revenuAttendu: _ancien, ...reste } = etat.reglages ?? {};
+  return { ...etat, reglages: { ...reste, revenus: liste } };
+};
+export function ajouterRevenu(etat, champs) {
+  const liste = revenus(etat);
+  let n = liste.length + 1;
+  while (liste.some((r) => r.id === 'rev' + n)) n += 1;
+  const r = { id: 'rev' + n, ...verifierRevenu(champs) };
+  return { etat: avecRevenus(etat, liste.concat([r])), id: r.id };
+}
+export function modifierRevenu(etat, id, champs) {
+  const liste = revenus(etat);
+  const avant = liste.find((r) => r.id === id);
+  if (!avant) throw new Error('Revenu introuvable.');
+  return avecRevenus(etat, liste.map((r) => (r.id === id ? { id, ...verifierRevenu({ ...avant, ...champs }) } : r)));
+}
+export function supprimerRevenu(etat, id) {
+  if (!revenus(etat).some((r) => r.id === id)) throw new Error('Revenu introuvable.');
+  return avecRevenus(etat, revenus(etat).filter((r) => r.id !== id));
+}
+/** Montant attendu pour le mois 'AAAA-MM' : par jour, × le nombre de jours du mois précédent. */
+export function montantAttendu(r, mois) {
+  if (r.unite !== 'jour') return r.centimes;
+  const avant = ajouterMois(mois + '-01', -1, 1);
+  return r.centimes * joursDuMois(Number(avant.slice(0, 4)), Number(avant.slice(5, 7)));
+}
+const bonMontant = (centimes, attendu) => Math.abs(centimes - attendu) <= attendu * TOLERANCE_REVENU;
+/**
+ * Revenus du mois et leur arrivée : chaque revenu prend la première entrée du mois qui lui correspond (une entrée ne sert
+ * qu'à un seul revenu). Rend [{ revenu, attendu, recu: ligne | null }].
+ */
+export function revenusDuMois(etat, mois, entrees) {
+  const prises = new Set();
+  return revenus(etat).map((r) => {
+    const attendu = montantAttendu(r, mois);
+    const recu = entrees.find((l) => !prises.has(l.id) && moisDe(l.date) === mois
+      && (r.reperage === 'libelle' || bonMontant(l.centimes, attendu))
+      && (r.reperage === 'montant' || contient(l.libelle, r.libelle))) ?? null;
+    if (recu) prises.add(recu.id);
+    return { revenu: r, attendu, recu };
+  });
 }
 /**
- * Entrées retenues pour le mois : tant que les vraies entrées n'atteignent pas la moitié du revenu attendu (le salaire
- * n'est pas encore arrivé), le revenu attendu ; ensuite les vraies entrées. Rend { centimes, prevu }.
+ * Entrées retenues pour le mois : les vraies entrées, plus le montant attendu de chaque revenu pas encore arrivé.
+ * Rend { centimes, prevu } (prevu : au moins un revenu compté sans être arrivé).
  */
-export function entreesRetenues(etat, reelles) {
-  const attendu = revenuAttendu(etat);
-  if (attendu && reelles < attendu / 2) return { centimes: attendu, prevu: true };
-  return { centimes: reelles, prevu: false };
+export function entreesRetenues(etat, reelles, mois, entrees) {
+  const manquants = revenusDuMois(etat, mois, entrees).filter((x) => !x.recu);
+  return { centimes: reelles + manquants.reduce((s, x) => s + x.attendu, 0), prevu: manquants.length > 0 };
 }
 
 export function definirRappel(etat, jours) {
