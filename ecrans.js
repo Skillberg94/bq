@@ -6,9 +6,9 @@
 //     (synchro, fichiers, mot de passe).
 // Les écrans ne sont présents que dans la version d'essai locale (site-essai/, node construire-site.mjs --essai) : sans
 // eux, demarrerEcrans rend null et la page provisoire reste affichée.
-import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=d8ff5a67c218';
-import { dateLocale } from './noyau/dates.js?v=d8ff5a67c218';
-import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=d8ff5a67c218';
+import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=984083fc16fc';
+import { dateLocale } from './noyau/dates.js?v=984083fc16fc';
+import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=984083fc16fc';
 
 const $ = (id) => document.getElementById(id);
 const VERSION = 'essai local · 3 nov. 2026';
@@ -47,6 +47,9 @@ export function demanderMotDePasse(titre) {
  * sur son iPhone) ; « plein écran » s'arrêtait donc avant le bas (bande noire) et le dessin, centré dans cette zone
  * trop courte, remontait sous l'heure. L'app ajoutée à l'écran d'accueil occupe toujours tout l'écran : on prend la
  * hauteur de l'écran. Dans le navigateur (ordinateur, Safari ordinaire), la hauteur de la fenêtre, comme avant.
+ * Deuxième essai (capture suivante du propriétaire : la zone avait bien la hauteur de l'écran, mais son bas restait
+ * caché) : Safari coupe les éléments « fixes » à sa fenêtre trop courte. La zone est donc posée dans la page
+ * (position absolue), et la page elle-même prend la hauteur de l'écran.
  */
 function calerSurEcran(zone) {
   const caler = () => {
@@ -56,8 +59,12 @@ function calerSurEcran(zone) {
     const ecran = debout ? { l: petit, h: grand } : { l: grand, h: petit };
     // Seulement quand l'app prend toute la largeur de l'écran (pas une fenêtre réduite sur tablette).
     const toutEcran = seule && Math.abs(innerWidth - ecran.l) <= 2;
+    const hauteur = (toutEcran ? Math.max(innerHeight, ecran.h) : innerHeight) + 'px';
+    for (const e of [document.documentElement, document.body]) e.style.height = hauteur;
+    zone.style.position = 'absolute';
     zone.style.bottom = 'auto';
-    zone.style.height = (toutEcran ? Math.max(innerHeight, ecran.h) : innerHeight) + 'px';
+    zone.style.height = hauteur;
+    scrollTo(0, 0);
   };
   caler();
   addEventListener('resize', caler);

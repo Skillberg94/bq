@@ -5,8 +5,8 @@
 // Le fichier contient l'entête du coffre (clé de données enveloppée par le mot de passe) et le contenu chiffré :
 // il s'ouvre avec le mot de passe seul, sur n'importe quel appareil. En clair : seulement le format et la date.
 
-import { CLE_ENTETE, CLE_DONNEES, lireEntete, ouvrirCoffre, chiffrer, dechiffrer, lireCoffre } from './coffre.js?v=d8ff5a67c218';
-import { importer, soldes } from './donnees.js?v=d8ff5a67c218';
+import { CLE_ENTETE, CLE_DONNEES, lireEntete, ouvrirCoffre, chiffrer, dechiffrer, lireCoffre } from './coffre.js?v=984083fc16fc';
+import { importer, soldes } from './donnees.js?v=984083fc16fc';
 
 export const FORMAT = 'bq-sauvegarde';
 export const RAPPEL_JOURS = 7;

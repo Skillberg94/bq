@@ -4,11 +4,11 @@
 // - actions : ce que l'app fait quand l'écran lui envoie une action (ajouter-depense, basculer-banque, changer-periode).
 // Aucun calcul de placement ici : l'écran (Tool Design) décide de tout l'affichage.
 
-import { soldes, lister, ajouterManuel, nomAffiche } from './donnees.js?v=d8ff5a67c218';
-import { jauge } from './seuils.js?v=d8ff5a67c218';
-import { aClasser, iconeCategorie } from './categories.js?v=d8ff5a67c218';
-import { attentes, estEnAttente } from './attentes.js?v=d8ff5a67c218';
-import { enEuros, enCentimes } from './montants.js?v=d8ff5a67c218';
+import { soldes, lister, ajouterManuel, nomAffiche } from './donnees.js?v=984083fc16fc';
+import { jauge } from './seuils.js?v=984083fc16fc';
+import { aClasser, iconeCategorie } from './categories.js?v=984083fc16fc';
+import { attentes, estEnAttente } from './attentes.js?v=984083fc16fc';
+import { enEuros, enCentimes } from './montants.js?v=984083fc16fc';
 
 export const PERIODES = ['jour', 'semaine', 'mois'];
 export const LIBELLES_PERIODES = { jour: "Aujourd'hui", semaine: 'Semaine en cours', mois: 'Mois en cours' };
