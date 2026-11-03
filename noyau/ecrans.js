@@ -6,21 +6,21 @@
 // rappel, saisies (texte des cases), dernier (dernière case tapée), valeurs (envoi d'une ligne touchée), ... }.
 // effet : ce que la page du navigateur doit faire elle-même (synchro, fichier, mot de passe…).
 
-import { lister, supprimer as supprimerLigne, modifier, nomAffiche, remettre, supprimerDefinitivement, corbeille } from './donnees.js?v=b62e002258b7';
+import { lister, supprimer as supprimerLigne, modifier, nomAffiche, remettre, supprimerDefinitivement, corbeille } from './donnees.js?v=608bfef3efde';
 const modifierLigne = modifier;
-import { soldes } from './soldes.js?v=b62e002258b7';
-import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=b62e002258b7';
-import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle } from './categories.js?v=b62e002258b7';
-import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=b62e002258b7';
-import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=b62e002258b7';
-import { attentes, estEnAttente } from './attentes.js?v=b62e002258b7';
-import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=b62e002258b7';
-import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=b62e002258b7';
-import { ajouterRegle, supprimerRegle } from './regles.js?v=b62e002258b7';
-import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenuAttendu, definirRevenuAttendu, entreesRetenues } from './reglages.js?v=b62e002258b7';
-import { enEuros, enCentimes } from './montants.js?v=b62e002258b7';
-import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=b62e002258b7';
-import { valeursAccueil, ajouterDepense, periodeSuivante } from './contrat-accueil.js?v=b62e002258b7';
+import { soldes } from './soldes.js?v=608bfef3efde';
+import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=608bfef3efde';
+import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle } from './categories.js?v=608bfef3efde';
+import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=608bfef3efde';
+import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=608bfef3efde';
+import { attentes, estEnAttente } from './attentes.js?v=608bfef3efde';
+import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=608bfef3efde';
+import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=608bfef3efde';
+import { ajouterRegle, supprimerRegle } from './regles.js?v=608bfef3efde';
+import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenuAttendu, definirRevenuAttendu, entreesRetenues } from './reglages.js?v=608bfef3efde';
+import { enEuros, enCentimes } from './montants.js?v=608bfef3efde';
+import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=608bfef3efde';
+import { valeursAccueil, ajouterDepense, periodeSuivante, avantSoldeDepart, MENTION_AVANT } from './contrat-accueil.js?v=608bfef3efde';
 
 export const PAGES = ['accueil', 'operations', 'categories', 'recurrents', 'seuils', 'objectifs', 'statistiques', 'soldes', 'sauvegarde', 'reglages'];
 
@@ -54,10 +54,12 @@ function montant(texte, nom = 'montant') {
   try { return enCentimes(texte); } catch { throw new Error('Le ' + nom + ' est illisible (exemple : 12,50).'); }
 }
 
-// ---- Période choisie (Opérations, Statistiques) : { type: 'mois' | 'annee' | 'semaine' | 'dates', repere, debut?, fin? }
+// ---- Période choisie (Opérations, Statistiques) : { type: 'mois' | 'annee' | 'semaine' | 'dates' | 'tout', repere, debut?, fin? }
+// « tout » (Opérations seulement, 03/11/2026) : toutes les lignes, depuis le début ; les flèches n'y changent rien.
 export const periodeDefaut = (aujourdhui) => ({ type: 'mois', repere: aujourdhui });
 
 export function bornesChoix(p) {
+  if (p.type === 'tout') return { debut: '0000-01-01', fin: '9999-12-31', libelle: 'DEPUIS LE DÉBUT' };
   if (p.type === 'annee') return { debut: p.repere.slice(0, 4) + '-01-01', fin: p.repere.slice(0, 4) + '-12-31', libelle: p.repere.slice(0, 4) };
   if (p.type === 'semaine') { const b = bornes('semaine', p.repere); return { ...b, libelle: ('Semaine du ' + jourMois(b.debut)).toUpperCase() }; }
   if (p.type === 'dates') return { debut: p.debut, fin: p.fin, libelle: (jourMois(p.debut) + ' → ' + dateLongue(p.fin)).toUpperCase() };
@@ -66,6 +68,7 @@ export function bornesChoix(p) {
 }
 
 export function decaler(p, sens) {
+  if (p.type === 'tout') return p;
   if (p.type === 'annee') return { ...p, repere: ajouterMois(p.repere, 12 * sens, 1) };
   if (p.type === 'semaine') return { ...p, repere: ajouterJours(p.repere, 7 * sens) };
   if (p.type === 'dates') { const n = nbJours(p.debut, p.fin) * sens; return { ...p, debut: ajouterJours(p.debut, n), fin: ajouterJours(p.fin, n) }; }
@@ -74,7 +77,7 @@ export function decaler(p, sens) {
 
 /** Boutons de période communs. Re-cliquer sur le choix en cours le décoche : retour au mois (demande du propriétaire). */
 function choisirPeriode(p, action, ctx) {
-  const types = { 'periode-annee': 'annee', 'periode-mois': 'mois', 'periode-semaine': 'semaine' };
+  const types = { 'periode-tout': 'tout', 'periode-annee': 'annee', 'periode-mois': 'mois', 'periode-semaine': 'semaine' };
   if (types[action]) return p.type === types[action] ? periodeDefaut(ctx.aujourdhui) : { type: types[action], repere: ctx.aujourdhui };
   if (action === 'periode-precedente') return decaler(p, -1);
   if (action === 'periode-suivante') return decaler(p, 1);
@@ -102,7 +105,7 @@ function ligneOperation(etat, l) {
     id: l.id,
     sens: l.sens === 'sortie' ? 'depense' : 'entree',
     libelle: nomAffiche(l),
-    date: dateLongue(l.date),
+    date: dateLongue(l.date) + (avantSoldeDepart(etat, l) ? MENTION_AVANT : ''),
     montant: signe(l.sens === 'sortie' ? -l.centimes : l.centimes),
     // Paiement CB en attente de prélèvement : l'étiquette le dit (noyau/attentes.js).
     categorie: estEnAttente(l) ? 'En attente' : l.sens !== 'sortie' ? 'Entrée' : l.retrait ? 'retrait' : nomCat(etat, l.categorie),
@@ -138,7 +141,11 @@ function vOperations(etat, ui, ctx) {
   const recu = lignes.filter((l) => l.sens === 'entree').reduce((s, l) => s + l.centimes, 0);
   return { linkVariables: {
     'periode-libelle': b.libelle, 'total-depense': euros(depense), 'total-recu': euros(recu),
-    operations: lignes.reverse().map((l) => ligneOperation(etat, l)),
+    // Arrivée depuis Catégories (choix du propriétaire, 03/11/2026 : « nouvelle ligne en haut, les lignes en haut du
+    // cadre », seulement depuis Catégories) : la liste « operations-recentes » de l'écran, qui part du haut avec la plus
+    // récente en haut ; l'autre liste, au même endroit, reste vide (et inversement). Les deux reçoivent les lignes du
+    // plus ancien au plus récent : c'est l'écran qui met la plus récente du côté choisi.
+    ...((ops) => (u.depuisCategorie ? { operations: [], 'operations-recentes': ops } : { operations: ops, 'operations-recentes': [] }))(lignes.reverse().map((l) => ligneOperation(etat, l))),
     // Fenêtre « Changer la catégorie » (fenêtre de détail) : toutes les catégories, nouvelles comprises.
     'choix-categories': etat.categories.map((c) => ({ id: c.id, nom: c.nom, icone: iconeCategorie(etat, c.id) })),
   } };
@@ -530,10 +537,19 @@ export function uiDepart(aujourdhui) {
  * Texte de départ des cases d'une fenêtre ouverte en touchant une ligne (l'écran les remplit lui-même avec la ligne ;
  * l'app retient la même chose, car elle ne reçoit que ce qui est tapé ensuite).
  */
+/**
+ * Page ouverte par le menu (pas par un saut de l'app) : une vue d'une catégorie ouverte depuis Catégories ne reste pas
+ * collée à Opérations, qui revient à ses choix de départ (mois, tout, toutes les catégories, plus récent en bas).
+ */
+export function uiPageOuverte(page, ui, aujourdhui) {
+  if (page === 'operations' && ui.operations.depuisCategorie) return { ...ui, operations: uiDepart(aujourdhui).operations };
+  return ui;
+}
+
 export function casesDeLaLigne(page, etat, ui, id, ctx) {
   const v = valeursEcran(page, etat, ui, ctx).linkVariables;
   const listes = { seuils: 'seuils-categories', categories: 'categories', recurrents: 'recurrents', objectifs: 'objectifs', operations: 'operations', accueil: 'operations' };
-  const ligne = (v[listes[page]] ?? []).find((l) => l.id === id);
+  const ligne = [...(v[listes[page]] ?? []), ...(page === 'operations' ? v['operations-recentes'] : [])].find((l) => l.id === id);
   if (!ligne) return {};
   if (page === 'categories') return { nom: ligne.nom };
   return Object.fromEntries(Object.entries(ligne).filter(([k]) => /^(seuil-categorie|frais-|objectif-|modif-)/.test(k)));
@@ -661,6 +677,13 @@ function aCategories(etat, ui, action, ctx) {
   }
   if (/^classer-/.test(action)) return {}; // le bouton envoie aussi « classer » avec la ligne : c'est lui qui compte
   if (action === 'categorie-touchee') return { ui: avec(ui, 'categories', { touchee: ctx.valeurs.id, icone: null }) };
+  // Toucher une catégorie (demande du propriétaire, 03/11/2026 : « je clique Abonnement, je vois toutes les dépenses
+  // Abonnement ») : Opérations s'ouvre sur cette catégorie, depuis le début. Le bouton « Modifier » de la ligne ouvre la fenêtre.
+  if (action === 'voir-categorie') {
+    const c = ctx.valeurs.id;
+    if (!etat.categories.some((x) => x.id === c)) throw new Error('Catégorie introuvable.');
+    return { ui: avec(ui, 'operations', { categorie: c, type: 'tout', periode: { type: 'tout', repere: ctx.aujourdhui }, touchee: null, depuisCategorie: true }), aller: 'operations' };
+  }
   const ic = PREFIXE_CATEGORIE(action, 'icone-categorie-');
   if (ic) return { ui: avec(ui, 'categories', { icone: u.icone === ic ? null : ic }) };
   const icn = PREFIXE_CATEGORIE(action, 'icone-nouvelle-');
@@ -780,7 +803,8 @@ function aSauvegarde(etat, ui, action, ctx) {
 
 function aReglages(etat, ui, action, ctx) {
   if (action === 'corbeille-remettre' && ctx.valeurs?.id) return { etat: remettre(etat, ctx.valeurs.id), message: 'Opération remise dans la liste.' };
-  if (action === 'corbeille-supprimer' && ctx.valeurs?.id) return { etat: supprimerDefinitivement(etat, ctx.valeurs.id), message: 'Supprimée pour de bon.' };
+  // Chaque suppression de Réglages demande d'abord (03/11/2026, demande du propriétaire : « pas supprimé en un clic »).
+  if (action === 'corbeille-supprimer' && ctx.valeurs?.id) return { etat: supprimerDefinitivement(etat, ctx.valeurs.id), message: 'Supprimée pour de bon.', confirmer: 'Supprimer cette opération pour de bon ? Elle ne pourra plus être remise.', confirmerOui: 'Supprimer' };
   if (action === 'synchroniser') return { effet: { type: 'synchroniser' } };
   if (action === 'enregistrer-pont') return { effet: { type: 'pont', url: String(ctx.saisies['pont-adresse'] ?? '').trim(), cle: String(ctx.saisies['pont-cle'] ?? '').trim() }, vider: ['pont-cle'] };
   const champ = { 'regle-champ-libelle': 'libelle', 'regle-champ-objet': 'objet', 'regle-champ-tous': 'tous' }[action];
@@ -789,13 +813,13 @@ function aReglages(etat, ui, action, ctx) {
     const r = ajouterRegle(etat, { contient: ctx.saisies['regle-mot'], champ: ui.reglages.champRegle ?? 'tous' });
     return { etat: r.etat, message: 'Règle ajoutée : ces dépenses deviennent des retraits.', vider: ['regle-mot'] };
   }
-  if (action === 'supprimer-regle' && ctx.valeurs?.id) return { etat: supprimerRegle(etat, ctx.valeurs.id), message: 'Règle supprimée.' };
+  if (action === 'supprimer-regle' && ctx.valeurs?.id) return { etat: supprimerRegle(etat, ctx.valeurs.id), message: 'Règle supprimée.', confirmer: 'Supprimer cette règle automatique ?', confirmerOui: 'Supprimer' };
   if (action === 'enregistrer-ignore') {
     const e = ajouterIgnore(etat, ctx.saisies['ignore-texte']);
     const n = Object.values(e.ajouts).filter((a) => a.ignorePar === e.libellesIgnores.at(-1).id).length;
     return { etat: e, message: 'Libellé ignoré aux prochaines synchros' + (n ? ' ; ' + n + ' opération(s) déjà là ne compte(nt) plus.' : '.'), vider: ['ignore-texte'] };
   }
-  if (action === 'supprimer-ignore' && ctx.valeurs?.id) return { etat: supprimerIgnore(etat, ctx.valeurs.id), message: 'Libellé retiré de la liste.' };
+  if (action === 'supprimer-ignore' && ctx.valeurs?.id) return { etat: supprimerIgnore(etat, ctx.valeurs.id), message: 'Libellé retiré de la liste.', confirmer: 'Retirer ce libellé de la liste ? Ses mails compteront de nouveau.', confirmerOui: 'Retirer' };
   if (action === 'supprimer-regle' || action === 'supprimer-ignore') return {}; // le bouton : l'envoi avec la ligne suit
   if (action === 'enregistrer-revenu') {
     const c = montant(ctx.saisies['revenu-attendu'], 'revenu');

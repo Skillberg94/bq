@@ -6,9 +6,9 @@
 //     (synchro, fichiers, mot de passe).
 // Les écrans ne sont présents que dans la version d'essai locale (site-essai/, node construire-site.mjs --essai) : sans
 // eux, demarrerEcrans rend null et la page provisoire reste affichée.
-import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=b62e002258b7';
-import { dateLocale } from './noyau/dates.js?v=b62e002258b7';
-import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=b62e002258b7';
+import { valeursEcran, agir, uiDepart, uiPageOuverte, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=608bfef3efde';
+import { dateLocale } from './noyau/dates.js?v=608bfef3efde';
+import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=608bfef3efde';
 
 const $ = (id) => document.getElementById(id);
 const VERSION = 'essai local · 3 nov. 2026';
@@ -145,13 +145,14 @@ export async function demarrerEcrans(app) {
 
   // Changement de page : le même lecteur reçoit le nouveau dessin (plus rapide que de tout refaire). « remonter » refait
   // le lecteur : c'est le seul moyen de vider les cases et de refermer les fenêtres de l'écran.
-  async function montrer(nouvelle, { remonter = false } = {}) {
+  async function montrer(nouvelle, { remonter = false, saut = false } = {}) {
     const design = await lireDesign(nouvelle);
     page = nouvelle;
     saisies = {};
     dernier = null;
     erreurs = {};
     ui = { ...ui, objectifs: { ...ui.objectifs, fenetre: null } }; // aucune fenêtre ouverte sur un écran qui s'ouvre
+    if (!saut) ui = uiPageOuverte(nouvelle, ui, dateLocale(Date.now()));
     if (vue && !remonter) { vue.mettreAJour({ design, ...valeurs() }); return; }
     if (vue) vue.demonter();
     vue = lecteur.monter(zone, {
@@ -210,7 +211,7 @@ export async function demarrerEcrans(app) {
       const annuler = r.annuler && { libelle: 'Annuler', faire: () => recevoir(r.annuler.action, { id: r.annuler.id }) };
       if (r.message && !(page === 'accueil' && action === 'ajouter-depense')) direMessage(r.message, r.erreur, annuler);
       if (r.aller && PAGES.includes(r.aller)) {
-        await montrer(r.aller);
+        await montrer(r.aller, { saut: true });
       } else if (r.vider && !r.erreur) {
         // Cases vidées et fenêtres de l'écran refermées par le lecteur lui-même (03/11/2026 : refaire l'écran pour les
         // vider montrait un instant un écran noir après « Ajouter »).

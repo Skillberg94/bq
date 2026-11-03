@@ -4,12 +4,16 @@
 // - actions : ce que l'app fait quand l'écran lui envoie une action (ajouter-depense, basculer-banque, changer-periode).
 // Aucun calcul de placement ici : l'écran (Tool Design) décide de tout l'affichage.
 
-import { soldes, lister, ajouterManuel, nomAffiche } from './donnees.js?v=b62e002258b7';
-import { jauge } from './seuils.js?v=b62e002258b7';
-import { aClasser, iconeCategorie } from './categories.js?v=b62e002258b7';
-import { attentes, estEnAttente } from './attentes.js?v=b62e002258b7';
-import { enEuros, enCentimes } from './montants.js?v=b62e002258b7';
+import { soldes, lister, ajouterManuel, nomAffiche } from './donnees.js?v=608bfef3efde';
+import { jauge } from './seuils.js?v=608bfef3efde';
+import { aClasser, iconeCategorie } from './categories.js?v=608bfef3efde';
+import { attentes, estEnAttente } from './attentes.js?v=608bfef3efde';
+import { enEuros, enCentimes } from './montants.js?v=608bfef3efde';
 
+// Ligne qui ne compte pas dans le solde parce qu'elle est d'avant le solde de référence (déjà incluse dans le solde
+// recopié de la banque) : la date le dit (03/11/2026, terme choisi par le propriétaire).
+export const MENTION_AVANT = ' · Antérieure à ton solde de départ';
+export const avantSoldeDepart = (etat, l) => !l.comptee && !l.supprime && !!etat.reference?.[l.compte];
 export const PERIODES = ['jour', 'semaine', 'mois'];
 export const LIBELLES_PERIODES = { jour: "Aujourd'hui", semaine: 'Semaine en cours', mois: 'Mois en cours' };
 export const periodeSuivante = (p) => PERIODES[(PERIODES.indexOf(p) + 1) % PERIODES.length];
@@ -45,7 +49,7 @@ export function valeursAccueil(etat, ui) {
     id: l.id,
     sens: l.sens === 'sortie' ? 'depense' : 'entree',
     libelle: nomAffiche(l),
-    date: dateLongue(l.date) + (estEnAttente(l) ? ' · CB en attente' : ''),
+    date: dateLongue(l.date) + (estEnAttente(l) ? ' · CB en attente' : avantSoldeDepart(etat, l) ? MENTION_AVANT : ''),
     montant: enEuros(l.sens === 'sortie' ? -l.centimes : l.centimes, { signe: true }),
     categorie: l.sens === 'sortie' ? nomCategorie(etat, l) : 'Entrée',
     'categorie-id': l.sens !== 'sortie' ? 'entree' : l.retrait ? 'retrait' : l.categorie ?? 'a-classer',

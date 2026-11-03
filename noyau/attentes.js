@@ -6,9 +6,9 @@
 // d'abord.
 // Une saisie en attente = dépense saisie à la main sur le compte banque, pas supprimée.
 
-import { lister } from './donnees.js?v=b62e002258b7';
-import { categorieDe } from './categories.js?v=b62e002258b7';
-import { effective } from './soldes.js?v=b62e002258b7';
+import { lister } from './donnees.js?v=608bfef3efde';
+import { categorieDe } from './categories.js?v=608bfef3efde';
+import { effective } from './soldes.js?v=608bfef3efde';
 
 const LIBELLE_PAR_DEFAUT = 'Dépense banque';
 

@@ -2,12 +2,12 @@
 // Les cellules sont des valeurs simples ou des cellules typées, que csv.js et xlsx.js savent écrire :
 //   texte | nombre | null | { t: 'montant', v: centimes } | { t: 'date', v: 'AAAA-MM-JJ' } | { t: 'dateheure', v: ms }
 
-import { lister } from './donnees.js?v=b62e002258b7';
-import { soldes } from './soldes.js?v=b62e002258b7';
-import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir } from './recurrents.js?v=b62e002258b7';
-import { jauge } from './seuils.js?v=b62e002258b7';
-import { normaliserLibelle } from './categories.js?v=b62e002258b7';
-import { dateLocale, moisDe, ajouterMois } from './dates.js?v=b62e002258b7';
+import { lister } from './donnees.js?v=608bfef3efde';
+import { soldes } from './soldes.js?v=608bfef3efde';
+import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir } from './recurrents.js?v=608bfef3efde';
+import { jauge } from './seuils.js?v=608bfef3efde';
+import { normaliserLibelle } from './categories.js?v=608bfef3efde';
+import { dateLocale, moisDe, ajouterMois } from './dates.js?v=608bfef3efde';
 
 const M = (v) => (v === null || v === undefined ? null : { t: 'montant', v });
 const D = (v) => (v ? { t: 'date', v } : null);
