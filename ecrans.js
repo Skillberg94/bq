@@ -6,9 +6,9 @@
 //     (synchro, fichiers, mot de passe).
 // Les écrans ne sont présents que dans la version d'essai locale (site-essai/, node construire-site.mjs --essai) : sans
 // eux, demarrerEcrans rend null et la page provisoire reste affichée.
-import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=afc1385028cb';
-import { dateLocale } from './noyau/dates.js?v=afc1385028cb';
-import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=afc1385028cb';
+import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=d47024da74e0';
+import { dateLocale } from './noyau/dates.js?v=d47024da74e0';
+import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=d47024da74e0';
 
 const $ = (id) => document.getElementById(id);
 const VERSION = 'essai local · 3 nov. 2026';
@@ -18,14 +18,23 @@ const LIGNES_TOUCHEES = ['operation-touchee', 'categorie-touchee', 'emetteur-tou
 const JOURNAL = ['localhost', '127.0.0.1'].includes(location.hostname);
 
 let minuterie = null;
-export function direMessage(texte, erreur = false) {
+// bouton (facultatif) : { libelle, faire } — un bouton dans le message, ex. « Annuler » après une suppression
+// (03/11/2026, comme les applications connues : pas de question, mais un moyen de revenir en arrière ; 5 secondes).
+export function direMessage(texte, erreur = false, bouton = null) {
   const e = $('ecrans-message');
   if (!e || !texte) return;
   e.textContent = texte;
+  if (bouton) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = bouton.libelle;
+    b.onclick = () => { e.hidden = true; clearTimeout(minuterie); bouton.faire(); };
+    e.append(' ', b);
+  }
   e.className = erreur ? 'erreur' : '';
   e.hidden = false;
   clearTimeout(minuterie);
-  minuterie = setTimeout(() => { e.hidden = true; }, erreur ? 4500 : 2800);
+  minuterie = setTimeout(() => { e.hidden = true; }, bouton ? 5000 : erreur ? 4500 : 2800);
 }
 
 /** Petite fenêtre HTML pour un mot de passe (jamais dans un écran dessiné : la case reste celle du navigateur). */
@@ -80,7 +89,8 @@ function calerSurEcran(zone) {
  */
 export function demanderConfirmation(texte, oui = 'Oui') {
   return new Promise((ok) => {
-    $('ecrans-confirmation-texte').textContent = texte;
+    // Espace insécable avant « ? ! : ; » : la ponctuation ne passe jamais seule à la ligne.
+    $('ecrans-confirmation-texte').textContent = texte.replace(/ ([?!:;])/g, ' $1');
     $('ecrans-confirmation-oui').textContent = oui;
     $('ecrans-confirmation').hidden = false;
     const fin = (valeur) => { $('ecrans-confirmation').hidden = true; ok(valeur); };
@@ -195,10 +205,14 @@ export async function demarrerEcrans(app) {
   // (visualViewport.offsetTop) est compensé, la page reste à sa place et c'est le lecteur qui remonte la case au-dessus
   // du clavier et laisse défiler l'écran.
   if (window.visualViewport) {
+    // iPhone (03/11/2026, « seule la moitié de l'écran défile avec le clavier ») : l'iPhone fait remonter la page de deux
+    // façons (la partie visible glisse, et parfois la page elle-même défile) : les deux sont compensées (pageTop). Et
+    // la hauteur cachée par le clavier se mesure sur la zone des écrans elle-même (sur l'iPhone, elle est plus haute que
+    // la fenêtre annoncée). Sur Android rien ne change : la page ne bouge pas et la zone a la hauteur de la fenêtre.
     const mesurer = () => {
-      const decale = Math.round(visualViewport.offsetTop);
+      const decale = Math.round(visualViewport.pageTop ?? visualViewport.offsetTop + scrollY);
       zone.style.transform = decale > 0 ? `translateY(${decale}px)` : '';
-      const ecart = Math.round(innerHeight - visualViewport.height);
+      const ecart = Math.round(zone.getBoundingClientRect().height - visualViewport.height);
       const h = ecart >= 80 ? ecart : 0;
       if (h === clavier) return;
       clavier = h;
@@ -206,6 +220,7 @@ export async function demarrerEcrans(app) {
     };
     visualViewport.addEventListener('resize', mesurer);
     visualViewport.addEventListener('scroll', mesurer);
+    addEventListener('scroll', mesurer);
   }
 
   // Changement de page : le même lecteur reçoit le nouveau dessin (plus rapide que de tout refaire). « remonter » refait
@@ -272,7 +287,8 @@ export async function demarrerEcrans(app) {
         if (fait?.message) direMessage(fait.message, !fait.ok);
       }
       // L'ajout d'une dépense sur l'accueil a son propre message dans l'écran ; le reste s'affiche en bas.
-      if (r.message && !(page === 'accueil' && action === 'ajouter-depense')) direMessage(r.message, r.erreur);
+      const annuler = r.annuler && { libelle: 'Annuler', faire: () => recevoir(r.annuler.action, { id: r.annuler.id }) };
+      if (r.message && !(page === 'accueil' && action === 'ajouter-depense')) direMessage(r.message, r.erreur, annuler);
       if (r.aller && PAGES.includes(r.aller)) {
         await montrer(r.aller);
       } else if (r.vider && !r.erreur) {

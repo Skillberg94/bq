@@ -2,7 +2,7 @@
 // séparateur « ; », virgule décimale, UTF-8 avec BOM, fins de ligne CRLF, dates AAAA-MM-JJ.
 // Protection : un texte qui commence par = + - @ serait pris pour une formule par Excel ; on le fait précéder d'une apostrophe.
 
-import { dateHeureLocale } from './dates.js?v=afc1385028cb';
+import { dateHeureLocale } from './dates.js?v=d47024da74e0';
 
 const SEPARATEUR = ';';
 

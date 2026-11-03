@@ -59,7 +59,6 @@
   button:not(#lecteur-zone *):not(#ecrans *) { font-size: 15px; padding: 10px 14px; border-radius: 10px; border: 0; background: #2a6df4; color: #fff; margin: 4px 6px 4px 0; cursor: pointer; }
   .menu button:not(#lecteur-zone *), #verrou button { background: #343c4d; }
   /* !important : la règle générale des boutons (bleu) est plus forte que ces sélecteurs. */
-  #ecrans-dialogue button, #ecrans-confirmation button { background: #343c4d !important; }
   .tete-seuil { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .tete-seuil select { width: auto; margin: 0; padding: 6px 8px; font-size: 14px; }
   .jauge { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; }
@@ -97,6 +96,8 @@
   #ecrans-message { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(18px, env(safe-area-inset-bottom)); max-width: min(92vw, 400px);
     padding: 10px 14px; border-radius: 12px; background: #0B0A0AF2; border: 1px solid #E9B949; color: #F6EFE3; font-size: 14px; text-align: center; z-index: 5; }
   #ecrans-message.erreur { border-color: #ff6b6b; color: #ffd0d0; }
+  /* Bouton dans le message (« Annuler » après une suppression) : texte doré, sans fond, comme un lien d'application. */
+  #ecrans-message button { display: inline !important; margin: 0 0 0 10px !important; padding: 4px 6px !important; background: none !important; border: 0 !important; color: #F2C75C !important; font: inherit !important; font-weight: 700 !important; cursor: pointer; }
   /* Chargement au démarrage (03/11/2026, demande du propriétaire) : anneau d'or qui tourne autour des lingots, à la
      place de l'ancienne page, jusqu'à l'affichage des écrans (ou de l'écran du mot de passe). */
   #chargement { position: fixed; inset: 0; z-index: 7; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -118,9 +119,20 @@
   @keyframes bq-reflet { to { background-position: -200% 0; } }
   #ecrans-dialogue, #ecrans-confirmation { position: fixed; inset: 0; background: #000a; display: flex; align-items: center; justify-content: center; z-index: 8; }
   #ecrans-dialogue[hidden], #ecrans-confirmation[hidden] { display: none; }
-  #ecrans-dialogue .carte, #ecrans-confirmation .carte { width: min(90vw, 380px); border-color: #E9B949; background: #0B0A0A; color: #F6EFE3; }
-  #ecrans-confirmation p { white-space: pre-line; }
-  #ecrans-confirmation #ecrans-confirmation-oui { background: #8A5A12 !important; }
+  /* Fenêtres de l'app hors des écrans dessinés (mot de passe, confirmation d'une restauration) au style des écrans
+     (03/11/2026, remarque du propriétaire : « pas du tout dans le style de l'application ») : fond noir, cadre doré
+     arrondi, police Montserrat, boutons en pilule (le bouton principal doré). */
+  #ecrans-dialogue, #ecrans-confirmation { background: #000000b8; }
+  #ecrans-dialogue .carte, #ecrans-confirmation .carte { width: min(88vw, 360px); padding: 22px 20px 18px; border: 1.5px solid #E9B949; border-radius: 22px;
+    background: linear-gradient(180deg, #14110D, #0B0A0A); color: #F6EFE3; font-family: Montserrat, -apple-system, system-ui, sans-serif;
+    box-shadow: 0 0 24px #E9B94933; text-align: center; }
+  #ecrans-dialogue h2 { margin: 0 0 14px; font-size: 19px; font-weight: 800; letter-spacing: 0.2px; }
+  #ecrans-confirmation p { white-space: pre-line; margin: 0 0 16px; font-size: 15px; line-height: 1.45; }
+  #ecrans-dialogue input { border-radius: 999px !important; border: 1px solid #E9B94966 !important; background: #0E0C0B !important; color: #F6EFE3 !important; text-align: center; }
+  #ecrans-dialogue p, #ecrans-confirmation p:last-child { display: flex; gap: 10px; justify-content: center; margin: 14px 0 0; }
+  #ecrans-dialogue button, #ecrans-confirmation button { flex: 1; margin: 0 !important; padding: 11px 10px !important; border-radius: 999px !important; border: 1px solid #E9B949 !important;
+    background: #0E0C0BD9 !important; color: #F6EFE3 !important; font-family: inherit; font-weight: 700; font-size: 15px !important; }
+  #ecrans-dialogue #ecrans-dialogue-ok, #ecrans-confirmation #ecrans-confirmation-oui { background: #E9B94947 !important; color: #F7D77A !important; }
 </style>
 </head>
 <body>
@@ -274,10 +286,10 @@
   </div>
 </div>
 
-<script src="config.js?v=afc1385028cb"></script>
-<script src="extraction.js?v=afc1385028cb"></script>
+<script src="config.js?v=d47024da74e0"></script>
+<script src="extraction.js?v=d47024da74e0"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script type="module" src="page.js?v=afc1385028cb"></script>
+<script type="module" src="page.js?v=d47024da74e0"></script>
 <script>
   // Sécurité : si la page n'a pas pu démarrer (fichier manquant, réseau coupé), le chargement laisse place à un message.
   setTimeout(function () {

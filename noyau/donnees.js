@@ -11,9 +11,9 @@
 // }
 // ts = moment où l'opération touche le solde : date d'arrivée du mail (internalDate de Gmail) ou moment de la saisie.
 
-import { compteDansSolde, effective, estRetrait, retraitCompte, soldes } from './soldes.js?v=afc1385028cb';
-import { categoriesParDefaut, categorieDe } from './categories.js?v=afc1385028cb';
-import { recurrentDe } from './recurrents.js?v=afc1385028cb';
+import { compteDansSolde, effective, estRetrait, retraitCompte, soldes } from './soldes.js?v=d47024da74e0';
+import { categoriesParDefaut, categorieDe } from './categories.js?v=d47024da74e0';
+import { recurrentDe } from './recurrents.js?v=d47024da74e0';
 
 export { soldes };
 
@@ -69,8 +69,9 @@ export function fusionnerMails(etat, nouvelles) {
 }
 
 /** Saisie à la main : dépense en espèces, ou dépense banque (case cochée) si la liaison mail a un problème. */
-export function ajouterManuel(etat, { compte, sens = 'sortie', libelle, date, centimes, ts }) {
-  const op = { id: 'm-' + ts + '-' + etat.operations.length, source: 'manuel', compte, sens, libelle, date, centimes, ts };
+// preleve : dépense par carte déjà prélevée par la banque, saisie faute de mail (pas « en attente »).
+export function ajouterManuel(etat, { compte, sens = 'sortie', libelle, date, centimes, ts, preleve }) {
+  const op = { id: 'm-' + ts + '-' + etat.operations.length, source: 'manuel', compte, sens, libelle, date, centimes, ts, ...(preleve && { preleve: true }) };
   verifierOperation(op);
   return { etat: { ...etat, operations: etat.operations.concat([op]) }, id: op.id };
 }
@@ -108,10 +109,36 @@ export function retablir(etat, id) {
   return { ...etat, ajouts: { ...etat.ajouts, [id]: reste } };
 }
 
-/** Supprime une ligne (masquée : une nouvelle synchro ne la réimporte pas). */
-export function supprimer(etat, id) {
+/** Supprime une ligne (masquée : une nouvelle synchro ne la réimporte pas). Elle va dans la corbeille (ts : l'heure). */
+export function supprimer(etat, id, ts) {
   trouver(etat, id);
-  return { ...etat, ajouts: { ...etat.ajouts, [id]: { ...(etat.ajouts[id] ?? {}), supprime: true } } };
+  return { ...etat, ajouts: { ...etat.ajouts, [id]: { ...(etat.ajouts[id] ?? {}), supprime: true, ...(ts && { supprimeLe: ts }) } } };
+}
+
+/** Corbeille (03/11/2026, demande du propriétaire) : remet une ligne supprimée dans la liste. */
+export function remettre(etat, id) {
+  trouver(etat, id);
+  const { supprime, supprimeLe, ...reste } = etat.ajouts[id] ?? {};
+  if (reste.valideePar) throw new Error('Cette saisie a été remplacée par le prélèvement de la banque.');
+  return { ...etat, ajouts: { ...etat.ajouts, [id]: reste } };
+}
+
+/**
+ * Corbeille : supprime une ligne pour de bon. Une saisie à la main disparaît entièrement ; une ligne de mail garde
+ * seulement son identifiant et sa marque (une prochaine synchro ne doit pas la réimporter), sans ses ajouts.
+ */
+export function supprimerDefinitivement(etat, id) {
+  const op = trouver(etat, id);
+  const { [id]: _ajouts, ...ajouts } = etat.ajouts;
+  if (op.source === 'manuel') return { ...etat, operations: etat.operations.filter((o) => o.id !== id), ajouts };
+  return { ...etat, ajouts: { ...ajouts, [id]: { supprime: true, definitif: true } } };
+}
+
+/** Lignes de la corbeille : supprimées par le propriétaire (pas les saisies remplacées par la banque), la dernière d'abord. */
+export function corbeille(etat) {
+  return lister(etat, { avecSupprimees: true })
+    .filter((l) => l.supprime && !l.definitif && !l.valideePar)
+    .sort((a, b) => (b.supprimeLe ?? 0) - (a.supprimeLe ?? 0));
 }
 
 /**

@@ -6,13 +6,16 @@
 // d'abord.
 // Une saisie en attente = dépense saisie à la main sur le compte banque, pas supprimée.
 
-import { lister } from './donnees.js?v=afc1385028cb';
-import { categorieDe } from './categories.js?v=afc1385028cb';
-import { effective } from './soldes.js?v=afc1385028cb';
+import { lister } from './donnees.js?v=d47024da74e0';
+import { categorieDe } from './categories.js?v=d47024da74e0';
+import { effective } from './soldes.js?v=d47024da74e0';
 
 const LIBELLE_PAR_DEFAUT = 'Dépense banque';
 
-export const estEnAttente = (l) => l.source === 'manuel' && l.compte === 'banque' && l.sens === 'sortie' && !l.supprime;
+export const estEnAttente = (l) => l.source === 'manuel' && l.compte === 'banque' && l.sens === 'sortie' && !l.supprime && !l.preleve;
+// CB déjà prélevée saisie à la main (pas de mail) : si un prélèvement du même montant finit par arriver, il la remplace
+// aussi (jamais compté deux fois), après les saisies en attente.
+const estPreleveeAMain = (l) => l.source === 'manuel' && l.compte === 'banque' && l.sens === 'sortie' && !l.supprime && !!l.preleve;
 
 /** Saisies en attente, de la plus ancienne à la plus récente. */
 export function attentes(etat) {
@@ -23,7 +26,7 @@ export function attentes(etat) {
 export function validerAttentes(etat, idsMails) {
   let e = etat;
   const validees = [];
-  const libres = attentes(etat);
+  const libres = [...attentes(etat), ...lister(etat).filter(estPreleveeAMain).reverse()];
   for (const id of idsMails) {
     const brute = e.operations.find((o) => o.id === id);
     if (!brute || brute.source !== 'mail') continue;

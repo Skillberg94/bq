@@ -4,11 +4,11 @@
 // - actions : ce que l'app fait quand l'écran lui envoie une action (ajouter-depense, basculer-banque, changer-periode).
 // Aucun calcul de placement ici : l'écran (Tool Design) décide de tout l'affichage.
 
-import { soldes, lister, ajouterManuel, nomAffiche } from './donnees.js?v=afc1385028cb';
-import { jauge } from './seuils.js?v=afc1385028cb';
-import { aClasser, iconeCategorie } from './categories.js?v=afc1385028cb';
-import { attentes, estEnAttente } from './attentes.js?v=afc1385028cb';
-import { enEuros, enCentimes } from './montants.js?v=afc1385028cb';
+import { soldes, lister, ajouterManuel, nomAffiche } from './donnees.js?v=d47024da74e0';
+import { jauge } from './seuils.js?v=d47024da74e0';
+import { aClasser, iconeCategorie } from './categories.js?v=d47024da74e0';
+import { attentes, estEnAttente } from './attentes.js?v=d47024da74e0';
+import { enEuros, enCentimes } from './montants.js?v=d47024da74e0';
 
 export const PERIODES = ['jour', 'semaine', 'mois'];
 export const LIBELLES_PERIODES = { jour: "Aujourd'hui", semaine: 'Semaine en cours', mois: 'Mois en cours' };
@@ -32,7 +32,7 @@ function nomCategorie(etat, l) {
 
 /**
  * Valeurs envoyées à l'écran d'accueil.
- * ui : { periode, aujourdhui ('AAAA-MM-JJ'), saisieBanque (bool), saisieMessage, synchro, rappel }
+ * ui : { periode, aujourdhui ('AAAA-MM-JJ'), saisieMode ('especes' | 'attente' | 'preleve'), saisieMessage, synchro, rappel }
  * Rend { linkVariables, gaugeValues } (noms exacts de DesignView / du lecteur).
  */
 export function valeursAccueil(etat, ui) {
@@ -73,7 +73,7 @@ export function valeursAccueil(etat, ui) {
       'rappel-sauvegarde': ui.rappel ?? '',
       synchro: ui.synchro ?? '',
       'saisie-message': ui.saisieMessage ?? '',
-      'saisie-banque': ouiNon(ui.saisieBanque),
+      'saisie-banque': ouiNon((ui.saisieMode ?? (ui.saisieBanque ? 'attente' : 'especes')) !== 'especes'),
       'attente-total': enAttente ? enEuros(enAttente) : '', // vide : la ligne « En attente » de la carte banque est cachée
       operations,
     },
@@ -83,9 +83,14 @@ export function valeursAccueil(etat, ui) {
 
 /**
  * Action « ajouter-depense » : saisies = { 'saisie-montant', 'saisie-description' } (texte tapé dans l'écran).
+ * mode (03/11/2026, choix du propriétaire) : « especes » (retirée des espèces), « attente » (CB pas encore prélevée :
+ * banque, en attente du prélèvement), « preleve » (CB déjà prélevée mais sans mail : banque, pas en attente).
+ * (banque: true = « attente », comme avant.)
  * Rend { etat, message, erreur (nom de la case en erreur, ou null), vider (vrai : vider les cases) }.
  */
-export function ajouterDepense(etat, saisies, { banque, maintenant, aujourdhui }) {
+export function ajouterDepense(etat, saisies, { mode, banque, maintenant, aujourdhui }) {
+  const choix = mode ?? (banque ? 'attente' : 'especes');
+  const surBanque = choix !== 'especes';
   let centimes;
   try {
     if (!String(saisies['saisie-montant'] ?? '').trim()) throw new Error('Tape le montant, par exemple 4,20.');
@@ -96,9 +101,10 @@ export function ajouterDepense(etat, saisies, { banque, maintenant, aujourdhui }
   }
   const description = String(saisies['saisie-description'] ?? '').trim();
   const r = ajouterManuel(etat, {
-    compte: banque ? 'banque' : 'especes', sens: 'sortie',
-    libelle: description || (banque ? 'Dépense banque' : 'Dépense en espèces'),
-    date: aujourdhui, centimes, ts: maintenant,
+    compte: surBanque ? 'banque' : 'especes', sens: 'sortie',
+    libelle: description || (surBanque ? 'Dépense banque' : 'Dépense en espèces'),
+    date: aujourdhui, centimes, ts: maintenant, ...(choix === 'preleve' && { preleve: true }),
   });
-  return { etat: r.etat, message: 'Ajouté : ' + enEuros(-centimes) + (banque ? ' (CB en attente)' : ' (espèces)'), erreur: null, vider: true };
+  const quoi = { especes: ' (espèces)', attente: ' (CB en attente)', preleve: ' (CB prélevée)' }[choix];
+  return { etat: r.etat, message: 'Ajouté : ' + enEuros(-centimes) + quoi, erreur: null, vider: true };
 }

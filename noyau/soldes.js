@@ -5,7 +5,7 @@
 // Un mail plus ancien que la référence reste dans la liste mais ne change pas le solde.
 // Un retrait au distributeur (dépense banque marquée « retrait ») baisse la banque et augmente les espèces.
 
-import { normaliserLibelle } from './libelles.js?v=afc1385028cb';
+import { normaliserLibelle } from './libelles.js?v=d47024da74e0';
 
 /** L'opération telle que le propriétaire la voit : ses corrections (libellé, date, montant, sens, compte) passent avant l'original. */
 export function effective(etat, op) {
