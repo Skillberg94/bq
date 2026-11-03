@@ -78,8 +78,15 @@
   pre { white-space: pre-wrap; font-size: 12px; background: #181d27; padding: 8px; border-radius: 6px; }
   table { border-collapse: collapse; font-size: 13px; } td { padding: 2px 10px 2px 0; }
   /* Écrans Tool Design (version d'essai) : plein écran, au format du dessin (iPhone, 428 × 951), centrés sur un ordinateur. */
-  body.avec-ecrans { padding: 0; max-width: none; background: #0A0908; overflow: hidden; }
-  #ecrans { position: fixed; top: 0; bottom: 0; left: 50%; transform: translateX(-50%); width: min(100vw, calc(100dvh * 428 / 951)); background: #0A0908; }
+  body.avec-ecrans { padding: 0; max-width: none; background: #0A0908; overflow: hidden; overscroll-behavior: none; }
+  /* Sous la barre de l'heure et de la batterie de l'iPhone (zone sûre), jamais dessous (03/11/2026). Tous les gestes du
+     doigt vont à l'app : sinon Safari prend le glissé pour lui et le défilement des écrans s'arrête quand on touche un
+     cadre. Pas de sélection de texte ni de menu « Copier » à l'appui long, sauf dans les cases de saisie. */
+  #ecrans { position: fixed; top: env(safe-area-inset-top); bottom: 0; left: 50%; transform: translateX(-50%);
+    width: min(100vw, calc((100dvh - env(safe-area-inset-top)) * 428 / 951)); background: #0A0908;
+    touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  #ecrans * { touch-action: none; }
+  #ecrans input, #ecrans textarea { -webkit-user-select: text; user-select: text; touch-action: manipulation; }
   #ecrans-message { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(18px, env(safe-area-inset-bottom)); max-width: min(92vw, 400px);
     padding: 10px 14px; border-radius: 12px; background: #0B0A0AF2; border: 1px solid #E9B949; color: #F6EFE3; font-size: 14px; text-align: center; z-index: 5; }
   #ecrans-message.erreur { border-color: #ff6b6b; color: #ffd0d0; }
