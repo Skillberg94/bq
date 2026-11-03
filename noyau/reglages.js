@@ -7,10 +7,10 @@
 // État : corrections: [{ id, compte, ts, ancien (centimes ou null), nouveau }], libellesIgnores: [{ id, texte }],
 //        reglages: { rappelJours?: number | null }
 
-import { definirReference, soldes } from './donnees.js?v=1197e14a1b2e';
-import { normaliserLibelle } from './libelles.js?v=1197e14a1b2e';
-import { effective } from './soldes.js?v=1197e14a1b2e';
-import { RAPPEL_JOURS } from './sauvegarde.js?v=1197e14a1b2e';
+import { definirReference, soldes } from './donnees.js?v=060df081ded8';
+import { normaliserLibelle } from './libelles.js?v=060df081ded8';
+import { effective } from './soldes.js?v=060df081ded8';
+import { RAPPEL_JOURS } from './sauvegarde.js?v=060df081ded8';
 
 export const IGNORES_DEPART = [{ id: 'i-cpt-depot', texte: 'VIR VERS CPT DEPOT PART' }, { id: 'i-livret-a', texte: 'VIR VERS LIVRET A' }];
 export const RAPPELS = [3, 7, 14, 30, null];
@@ -56,6 +56,23 @@ const sansPoints = (t) => normaliserLibelle(String(t).replace(/\./g, ' '));
 const contient = (libelle, texte) => sansPoints(libelle ?? '').includes(sansPoints(texte));
 export function estIgnore(etat, libelle) {
   return libellesIgnores(etat).some((x) => contient(libelle, x.texte));
+}
+
+// Revenu attendu par mois (demande du propriétaire, 03/11/2026) : sert à estimer l'économie du mois tant que le vrai
+// salaire n'est pas arrivé (voir entreesRetenues).
+export const revenuAttendu = (etat) => etat.reglages?.revenuAttendu ?? null;
+export function definirRevenuAttendu(etat, centimes) {
+  if (centimes !== null && (!Number.isInteger(centimes) || centimes <= 0)) throw new Error('Le revenu attendu doit être un montant positif.');
+  return { ...etat, reglages: { ...(etat.reglages ?? {}), revenuAttendu: centimes } };
+}
+/**
+ * Entrées retenues pour le mois : tant que les vraies entrées n'atteignent pas la moitié du revenu attendu (le salaire
+ * n'est pas encore arrivé), le revenu attendu ; ensuite les vraies entrées. Rend { centimes, prevu }.
+ */
+export function entreesRetenues(etat, reelles) {
+  const attendu = revenuAttendu(etat);
+  if (attendu && reelles < attendu / 2) return { centimes: attendu, prevu: true };
+  return { centimes: reelles, prevu: false };
 }
 
 export function definirRappel(etat, jours) {

@@ -11,9 +11,9 @@
 // }
 // ts = moment où l'opération touche le solde : date d'arrivée du mail (internalDate de Gmail) ou moment de la saisie.
 
-import { compteDansSolde, effective, estRetrait, retraitCompte, soldes } from './soldes.js?v=1197e14a1b2e';
-import { categoriesParDefaut, categorieDe } from './categories.js?v=1197e14a1b2e';
-import { recurrentDe } from './recurrents.js?v=1197e14a1b2e';
+import { compteDansSolde, effective, estRetrait, retraitCompte, soldes } from './soldes.js?v=060df081ded8';
+import { categoriesParDefaut, categorieDe } from './categories.js?v=060df081ded8';
+import { recurrentDe } from './recurrents.js?v=060df081ded8';
 
 export { soldes };
 

@@ -6,21 +6,21 @@
 // rappel, saisies (texte des cases), dernier (dernière case tapée), valeurs (envoi d'une ligne touchée), ... }.
 // effet : ce que la page du navigateur doit faire elle-même (synchro, fichier, mot de passe…).
 
-import { lister, supprimer as supprimerLigne, modifier, nomAffiche } from './donnees.js?v=1197e14a1b2e';
+import { lister, supprimer as supprimerLigne, modifier, nomAffiche } from './donnees.js?v=060df081ded8';
 const modifierLigne = modifier;
-import { soldes } from './soldes.js?v=1197e14a1b2e';
-import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=1197e14a1b2e';
-import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle } from './categories.js?v=1197e14a1b2e';
-import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=1197e14a1b2e';
-import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=1197e14a1b2e';
-import { attentes, estEnAttente } from './attentes.js?v=1197e14a1b2e';
-import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=1197e14a1b2e';
-import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=1197e14a1b2e';
-import { ajouterRegle, supprimerRegle } from './regles.js?v=1197e14a1b2e';
-import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel } from './reglages.js?v=1197e14a1b2e';
-import { enEuros, enCentimes } from './montants.js?v=1197e14a1b2e';
-import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=1197e14a1b2e';
-import { valeursAccueil, ajouterDepense, periodeSuivante } from './contrat-accueil.js?v=1197e14a1b2e';
+import { soldes } from './soldes.js?v=060df081ded8';
+import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=060df081ded8';
+import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle } from './categories.js?v=060df081ded8';
+import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=060df081ded8';
+import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=060df081ded8';
+import { attentes, estEnAttente } from './attentes.js?v=060df081ded8';
+import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=060df081ded8';
+import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=060df081ded8';
+import { ajouterRegle, supprimerRegle } from './regles.js?v=060df081ded8';
+import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenuAttendu, definirRevenuAttendu, entreesRetenues } from './reglages.js?v=060df081ded8';
+import { enEuros, enCentimes } from './montants.js?v=060df081ded8';
+import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=060df081ded8';
+import { valeursAccueil, ajouterDepense, periodeSuivante } from './contrat-accueil.js?v=060df081ded8';
 
 export const PAGES = ['accueil', 'operations', 'categories', 'recurrents', 'seuils', 'objectifs', 'statistiques', 'soldes', 'sauvegarde', 'reglages'];
 
@@ -228,8 +228,9 @@ function periodiciteTexte(p) {
 function economieDuMois(etat, aujourdhui) {
   const totalFrais = etat.recurrents.reduce((s, r) => s + parMois(r), 0);
   const seuil = seuilPour(etat, 'mois', aujourdhui) ?? 0;
-  const entrees = bilanDuMois(etat, moisDe(aujourdhui)).entrees;
-  return { totalFrais, seuil, entrees, prevu: seuil + totalFrais, economie: entrees - seuil - totalFrais };
+  // Revenu attendu (Réglages) tant que le vrai salaire n'est pas arrivé.
+  const { centimes: entrees, prevu: entreesPrevues } = entreesRetenues(etat, bilanDuMois(etat, moisDe(aujourdhui)).entrees);
+  return { totalFrais, seuil, entrees, entreesPrevues, prevu: seuil + totalFrais, economie: entrees - seuil - totalFrais };
 }
 
 function vRecurrents(etat, ui, ctx) {
@@ -249,7 +250,7 @@ function vRecurrents(etat, ui, ctx) {
     'total-mois': euros(e.totalFrais), 'a-venir': euros(resteAPrevoir(etat, a)) + ' (' + aVenir.length + ' frais)',
     'solde-apres': apres === null ? 'solde à saisir' : enEuros(apres),
     'seuil-mois': e.seuil ? euros(e.seuil) : 'non réglé', 'total-prevu': euros(e.prevu),
-    'entrees-mois': euros(e.entrees), economie: enEuros(e.economie), 'economie-negative': ouiNon(e.economie < 0),
+    'entrees-mois': euros(e.entrees) + (e.entreesPrevues ? ' (prévu)' : ''), economie: enEuros(e.economie), 'economie-negative': ouiNon(e.economie < 0),
     suggestions: suggestionsFrais(etat).map((s) => ({ id: s.id, emetteur: s.libelle, montant: euros(s.centimes), periodicite: periodiciteTexte(s), fois: String(s.fois), icone: 'forfait' })), // l'écran écrit « vu {fois} fois »
     recurrents: etat.recurrents.map((r) => {
       const f = apercu.find((x) => x.id === r.id);
@@ -303,7 +304,7 @@ function vObjectifs(etat, ui, ctx) {
     'economise-mois': enEuros(ceMois), 'economise-mois-negatif': ouiNon(ceMois < 0),
     'economise-annee': enEuros(annee), 'economise-annee-negatif': ouiNon(annee < 0),
     'economise-total': enEuros(total), 'economise-total-negatif': ouiNon(total < 0),
-    'entrees-mois': euros(e.entrees), 'total-prevu': euros(e.prevu), economie: enEuros(e.economie), 'economie-negative': ouiNon(e.economie < 0),
+    'entrees-mois': euros(e.entrees) + (e.entreesPrevues ? ' (prévu)' : ''), 'total-prevu': euros(e.prevu), economie: enEuros(e.economie), 'economie-negative': ouiNon(e.economie < 0),
     'economie-nombre': enNombre(base), 'nouveau-epargne-nombre': '0',
     'reparti-pourcent': String(partTotale), reparti: euros(Math.round((base * partTotale) / 100)), 'reparti-complet': ouiNon(partTotale >= 100),
     libre: enEuros(Math.round((base * libreP) / 100)), 'libre-pourcent': (libreP < 0 ? '−' : '') + libreTexte,
@@ -442,6 +443,7 @@ function vReglages(etat, ui, ctx) {
     regles: (etat.regles ?? []).map((r) => ({ id: r.id, mot: r.contient, champ: CHAMPS_REGLE[r.champ] ?? r.champ })),
     ignores: libellesIgnores(etat).map((x) => ({ id: x.id, texte: x.texte })),
     version: ctx.version ?? '',
+    'revenu-attendu': revenuAttendu(etat) ? euros(revenuAttendu(etat)) + ' par mois' : 'non réglé',
   } };
 }
 
@@ -782,6 +784,11 @@ function aReglages(etat, ui, action, ctx) {
   }
   if (action === 'supprimer-ignore' && ctx.valeurs?.id) return { etat: supprimerIgnore(etat, ctx.valeurs.id), message: 'Libellé retiré de la liste.' };
   if (action === 'supprimer-regle' || action === 'supprimer-ignore') return {}; // le bouton : l'envoi avec la ligne suit
+  if (action === 'enregistrer-revenu') {
+    const c = montant(ctx.saisies['revenu-attendu'], 'revenu');
+    if (c !== null && c <= 0) throw new Error('Le revenu attendu doit être un montant positif.');
+    return { etat: definirRevenuAttendu(etat, c), message: c === null ? 'Revenu attendu retiré.' : 'Revenu attendu : ' + euros(c) + ' par mois.', vider: ['revenu-attendu'] };
+  }
   if (action === 'verrouiller') return { effet: { type: 'verrouiller' } };
   if (action === 'changer-mot-de-passe') return { effet: { type: 'changer-mot-de-passe' } };
   return null;
