@@ -6,9 +6,9 @@
 //     (synchro, fichiers, mot de passe).
 // Les écrans ne sont présents que dans la version d'essai locale (site-essai/, node construire-site.mjs --essai) : sans
 // eux, demarrerEcrans rend null et la page provisoire reste affichée.
-import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=060df081ded8';
-import { dateLocale } from './noyau/dates.js?v=060df081ded8';
-import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=060df081ded8';
+import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=d8ff5a67c218';
+import { dateLocale } from './noyau/dates.js?v=d8ff5a67c218';
+import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=d8ff5a67c218';
 
 const $ = (id) => document.getElementById(id);
 const VERSION = 'essai local · 3 nov. 2026';
@@ -39,6 +39,29 @@ export function demanderMotDePasse(titre) {
     $('ecrans-dialogue-ok').onclick = () => fin($('ecrans-dialogue-mdp').value);
     $('ecrans-dialogue-annuler').onclick = () => fin(null);
   });
+}
+
+/**
+ * Zone des écrans à la hauteur de tout l'écran du téléphone (03/11/2026, captures du propriétaire sur iPhone) : dans
+ * l'app ajoutée à l'écran d'accueil, Safari annonce une fenêtre plus courte de la hauteur de la barre d'état (47 pt
+ * sur son iPhone) ; « plein écran » s'arrêtait donc avant le bas (bande noire) et le dessin, centré dans cette zone
+ * trop courte, remontait sous l'heure. L'app ajoutée à l'écran d'accueil occupe toujours tout l'écran : on prend la
+ * hauteur de l'écran. Dans le navigateur (ordinateur, Safari ordinaire), la hauteur de la fenêtre, comme avant.
+ */
+function calerSurEcran(zone) {
+  const caler = () => {
+    const seule = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+    const debout = innerHeight >= innerWidth;
+    const [petit, grand] = [Math.min(screen.width, screen.height), Math.max(screen.width, screen.height)];
+    const ecran = debout ? { l: petit, h: grand } : { l: grand, h: petit };
+    // Seulement quand l'app prend toute la largeur de l'écran (pas une fenêtre réduite sur tablette).
+    const toutEcran = seule && Math.abs(innerWidth - ecran.l) <= 2;
+    zone.style.bottom = 'auto';
+    zone.style.height = (toutEcran ? Math.max(innerHeight, ecran.h) : innerHeight) + 'px';
+  };
+  caler();
+  addEventListener('resize', caler);
+  addEventListener('orientationchange', () => setTimeout(caler, 300));
 }
 
 /**
@@ -103,6 +126,7 @@ export async function demarrerEcrans(app) {
   $('app').hidden = true;
   zone.hidden = false;
   document.body.classList.add('avec-ecrans');
+  calerSurEcran(zone);
 
   let page = 'accueil';
   let ui = uiDepart(dateLocale(Date.now()));

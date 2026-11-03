@@ -6,21 +6,21 @@
 // rappel, saisies (texte des cases), dernier (dernière case tapée), valeurs (envoi d'une ligne touchée), ... }.
 // effet : ce que la page du navigateur doit faire elle-même (synchro, fichier, mot de passe…).
 
-import { lister, supprimer as supprimerLigne, modifier, nomAffiche } from './donnees.js?v=060df081ded8';
+import { lister, supprimer as supprimerLigne, modifier, nomAffiche } from './donnees.js?v=d8ff5a67c218';
 const modifierLigne = modifier;
-import { soldes } from './soldes.js?v=060df081ded8';
-import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=060df081ded8';
-import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle } from './categories.js?v=060df081ded8';
-import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=060df081ded8';
-import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=060df081ded8';
-import { attentes, estEnAttente } from './attentes.js?v=060df081ded8';
-import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=060df081ded8';
-import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=060df081ded8';
-import { ajouterRegle, supprimerRegle } from './regles.js?v=060df081ded8';
-import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenuAttendu, definirRevenuAttendu, entreesRetenues } from './reglages.js?v=060df081ded8';
-import { enEuros, enCentimes } from './montants.js?v=060df081ded8';
-import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=060df081ded8';
-import { valeursAccueil, ajouterDepense, periodeSuivante } from './contrat-accueil.js?v=060df081ded8';
+import { soldes } from './soldes.js?v=d8ff5a67c218';
+import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=d8ff5a67c218';
+import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle } from './categories.js?v=d8ff5a67c218';
+import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=d8ff5a67c218';
+import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=d8ff5a67c218';
+import { attentes, estEnAttente } from './attentes.js?v=d8ff5a67c218';
+import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=d8ff5a67c218';
+import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=d8ff5a67c218';
+import { ajouterRegle, supprimerRegle } from './regles.js?v=d8ff5a67c218';
+import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenuAttendu, definirRevenuAttendu, entreesRetenues } from './reglages.js?v=d8ff5a67c218';
+import { enEuros, enCentimes } from './montants.js?v=d8ff5a67c218';
+import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=d8ff5a67c218';
+import { valeursAccueil, ajouterDepense, periodeSuivante } from './contrat-accueil.js?v=d8ff5a67c218';
 
 export const PAGES = ['accueil', 'operations', 'categories', 'recurrents', 'seuils', 'objectifs', 'statistiques', 'soldes', 'sauvegarde', 'reglages'];
 

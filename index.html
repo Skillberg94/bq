@@ -82,11 +82,13 @@
   /* Tout l'écran, sans proportions imposées : Tool Design adapte lui-même le dessin à chaque écran (remarque du
      propriétaire, 03/11/2026 ; les proportions imposées laissaient des bandes noires sur l'iPhone). Tous les gestes du doigt vont à l'app : sinon Safari prend le glissé pour lui
      et le défilement des écrans s'arrête quand on touche un cadre. Pas de sélection de texte ni de menu « Copier » à
-     l'appui long, sauf dans les cases de saisie. */
+     l'appui long, sauf dans les cases de saisie. La hauteur est réglée par ecrans.js (calerSurEcran) : sur l'iPhone, dans
+     l'app ajoutée à l'écran d'accueil, « inset: 0 » s'arrête avant le bas. Les cases de saisie aussi laissent le glissé
+     à l'app (un glissé commencé sur une case arrêtait le défilement). */
   #ecrans { position: fixed; inset: 0; background: #0A0908;
     touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   #ecrans * { touch-action: none; }
-  #ecrans input, #ecrans textarea { -webkit-user-select: text; user-select: text; touch-action: manipulation; }
+  #ecrans input, #ecrans textarea { -webkit-user-select: text; user-select: text; }
   #ecrans-message { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(18px, env(safe-area-inset-bottom)); max-width: min(92vw, 400px);
     padding: 10px 14px; border-radius: 12px; background: #0B0A0AF2; border: 1px solid #E9B949; color: #F6EFE3; font-size: 14px; text-align: center; z-index: 5; }
   #ecrans-message.erreur { border-color: #ff6b6b; color: #ffd0d0; }
@@ -267,10 +269,10 @@
   </div>
 </div>
 
-<script src="config.js?v=060df081ded8"></script>
-<script src="extraction.js?v=060df081ded8"></script>
+<script src="config.js?v=d8ff5a67c218"></script>
+<script src="extraction.js?v=d8ff5a67c218"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script type="module" src="page.js?v=060df081ded8"></script>
+<script type="module" src="page.js?v=d8ff5a67c218"></script>
 <script>
   // Sécurité : si la page n'a pas pu démarrer (fichier manquant, réseau coupé), le chargement laisse place à un message.
   setTimeout(function () {
