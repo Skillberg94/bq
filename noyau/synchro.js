@@ -7,9 +7,9 @@
 // Le noyau ne lit pas les mails lui-même : on lui passe `lire` (message -> { id, ts, objet, texte })
 // et `extraire` (l'extraction testée de test-gmail/extraction.js).
 
-import { fusionnerMails } from './donnees.js?v=448471bd735c';
-import { estIgnore } from './reglages.js?v=448471bd735c';
-import { validerAttentes } from './attentes.js?v=448471bd735c';
+import { fusionnerMails } from './donnees.js?v=eafe534f6553';
+import { estIgnore } from './reglages.js?v=eafe534f6553';
+import { validerAttentes } from './attentes.js?v=eafe534f6553';
 
 export const LIMITE = 50;
 export const MARGE_MS = 60 * 60 * 1000; // on redemande 1 h en arrière : l'anti-doublon écarte ce qui est déjà connu

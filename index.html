@@ -4,7 +4,10 @@
 <meta charset="utf-8">
 <!-- maximum-scale=1 : l'iPhone ne zoome plus sur une case qu'on touche (les lettres des écrans font moins de 16 px, et
      le zoom restait après la saisie ; remarque du propriétaire, 03/11/2026). -->
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<!-- interactive-widget=overlays-content (Android) : le clavier passe par-dessus l'app au lieu de rétrécir la fenêtre (le
+     dessin se serait recalé sur une page écrasée) ; l'écran peut alors défiler de la hauteur du clavier. L'iPhone ignore
+     ce réglage (son clavier passe déjà par-dessus). -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=overlays-content">
 <meta name="theme-color" content="#0f1218">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -271,10 +274,10 @@
   </div>
 </div>
 
-<script src="config.js?v=448471bd735c"></script>
-<script src="extraction.js?v=448471bd735c"></script>
+<script src="config.js?v=eafe534f6553"></script>
+<script src="extraction.js?v=eafe534f6553"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script type="module" src="page.js?v=448471bd735c"></script>
+<script type="module" src="page.js?v=eafe534f6553"></script>
 <script>
   // Sécurité : si la page n'a pas pu démarrer (fichier manquant, réseau coupé), le chargement laisse place à un message.
   setTimeout(function () {

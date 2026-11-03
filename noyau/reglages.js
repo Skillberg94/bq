@@ -7,10 +7,10 @@
 // État : corrections: [{ id, compte, ts, ancien (centimes ou null), nouveau }], libellesIgnores: [{ id, texte }],
 //        reglages: { rappelJours?: number | null }
 
-import { definirReference, soldes } from './donnees.js?v=448471bd735c';
-import { normaliserLibelle } from './libelles.js?v=448471bd735c';
-import { effective } from './soldes.js?v=448471bd735c';
-import { RAPPEL_JOURS } from './sauvegarde.js?v=448471bd735c';
+import { definirReference, soldes } from './donnees.js?v=eafe534f6553';
+import { normaliserLibelle } from './libelles.js?v=eafe534f6553';
+import { effective } from './soldes.js?v=eafe534f6553';
+import { RAPPEL_JOURS } from './sauvegarde.js?v=eafe534f6553';
 
 export const IGNORES_DEPART = [{ id: 'i-cpt-depot', texte: 'VIR VERS CPT DEPOT PART' }, { id: 'i-livret-a', texte: 'VIR VERS LIVRET A' }];
 export const RAPPELS = [3, 7, 14, 30, null];

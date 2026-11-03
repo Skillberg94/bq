@@ -6,9 +6,9 @@
 //     (synchro, fichiers, mot de passe).
 // Les écrans ne sont présents que dans la version d'essai locale (site-essai/, node construire-site.mjs --essai) : sans
 // eux, demarrerEcrans rend null et la page provisoire reste affichée.
-import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=448471bd735c';
-import { dateLocale } from './noyau/dates.js?v=448471bd735c';
-import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=448471bd735c';
+import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=eafe534f6553';
+import { dateLocale } from './noyau/dates.js?v=eafe534f6553';
+import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=eafe534f6553';
 
 const $ = (id) => document.getElementById(id);
 const VERSION = 'essai local · 3 nov. 2026';
@@ -145,6 +145,8 @@ export async function demarrerEcrans(app) {
   let erreurs = {};
   let vue = null;
   let occupe = false;
+  // Hauteur du clavier du téléphone quand il est ouvert (pixels), 0 sinon.
+  let clavier = 0;
 
   const contexte = (valeurs = {}) => ({
     aujourdhui: dateLocale(Date.now()), maintenant: Date.now(), saisies, dernier, valeurs,
@@ -153,9 +155,48 @@ export async function demarrerEcrans(app) {
   });
   const valeurs = () => {
     const v = valeursEcran(page, app.etat(), ui, contexte());
-    return { linkVariables: v.linkVariables, gaugeValues: v.gaugeValues, chartData: v.chartData, inputStates: erreurs, buttonStates: v.buttonStates, appPicks: v.appPicks };
+    return { linkVariables: v.linkVariables, gaugeValues: v.gaugeValues, chartData: v.chartData, inputStates: erreurs, buttonStates: v.buttonStates, appPicks: v.appPicks, keyboardInset: clavier };
   };
   const rafraichir = () => vue?.mettreAJour(valeurs());
+
+  // Menu latéral au glissé, comme les applications connues (demande du propriétaire, 03/11/2026) : un glissé vers la
+  // droite l'ouvre, vers la gauche le range. Le glissé doit être net (au moins 70 px, deux fois plus horizontal que
+  // vertical, en moins de 0,7 s) : un défilement de haut en bas ne l'ouvre jamais. L'écran reçoit un événement
+  // (« ouvrir-menu », « fermer-menu ») auquel répond le logo de l'en-tête.
+  let evenements = 0;
+  let glisse = null;
+  zone.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    glisse = e.touches.length === 1 && t ? { x: t.clientX, y: t.clientY, at: Date.now() } : null;
+  }, { passive: true, capture: true });
+  // Dernière position du doigt (la fin du toucher ne la donne pas toujours).
+  zone.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    if (glisse && t) glisse.fin = { x: t.clientX, y: t.clientY };
+  }, { passive: true, capture: true });
+  zone.addEventListener('touchend', () => {
+    const g = glisse;
+    glisse = null;
+    if (!g || !g.fin || !vue || Date.now() - g.at > 700) return;
+    const dx = g.fin.x - g.x;
+    const dy = g.fin.y - g.y;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < 2 * Math.abs(dy)) return;
+    vue.mettreAJour({ linkEvent: { name: dx > 0 ? 'ouvrir-menu' : 'fermer-menu', times: ++evenements } });
+  }, { passive: true, capture: true });
+
+  // Clavier ouvert (03/11/2026, « pouvoir encore monter et descendre quand je saisis, même sur un écran sans
+  // défilement ») : l'écran peut défiler de la hauteur du clavier, comme dans les applications du téléphone. La fenêtre
+  // visible rétrécit quand le clavier s'ouvre ; moins de 80 px d'écart : pas de clavier (barre du navigateur).
+  if (window.visualViewport) {
+    const mesurer = () => {
+      const ecart = Math.round(innerHeight - visualViewport.height);
+      const h = ecart >= 80 ? ecart : 0;
+      if (h === clavier) return;
+      clavier = h;
+      vue?.mettreAJour({ keyboardInset: clavier });
+    };
+    visualViewport.addEventListener('resize', mesurer);
+  }
 
   // Changement de page : le même lecteur reçoit le nouveau dessin (plus rapide que de tout refaire). « remonter » refait
   // le lecteur : c'est le seul moyen de vider les cases et de refermer les fenêtres de l'écran.
