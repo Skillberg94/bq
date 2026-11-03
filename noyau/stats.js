@@ -2,12 +2,11 @@
 // Règle générale : « dépense » = sortie d'argent non supprimée, hors retrait au distributeur (l'argent change de poche,
 // il n'est pas dépensé). Les entrées d'argent ne sont jamais des dépenses.
 
-import { lister } from './donnees.js';
-import { normaliserLibelle } from './categories.js';
-import { compteDansSolde } from './soldes.js';
-import { bornes, depensesPeriode, seuilPour } from './seuils.js';
-import { ajouterJours, ajouterMois, moisDe } from './dates.js';
-import { effective } from './soldes.js';
+import { lister } from './donnees.js?v=1197e14a1b2e';
+import { normaliserLibelle } from './categories.js?v=1197e14a1b2e';
+import { bornes, depensesPeriode, seuilPour } from './seuils.js?v=1197e14a1b2e';
+import { ajouterJours, ajouterMois, moisDe } from './dates.js?v=1197e14a1b2e';
+import { effective, estRetrait } from './soldes.js?v=1197e14a1b2e';
 
 const estDepense = (l) => !l.supprime && l.sens === 'sortie' && !l.retrait;
 
@@ -48,21 +47,36 @@ export function depensesParPeriode(etat, periode, date, nombre) {
   return resultat;
 }
 
-/** Solde en fin de chaque jour, de `debut` à `fin` : courbe. Vide tant qu'il n'y a pas de solde de référence. */
+/**
+ * Solde en fin de chaque jour, de `debut` à `fin` : courbe. Vide tant qu'il n'y a pas de solde de référence.
+ * Le solde de référence est exact au moment où il a été saisi (ou corrigé) : les opérations d'APRÈS s'ajoutent jour
+ * après jour ; celles d'AVANT y sont déjà comptées, on les retire donc pour les jours où elles n'avaient pas encore eu
+ * lieu (sinon, après une correction, tout le passé de la courbe devenait plat à la valeur corrigée — 03/11/2026).
+ */
 export function evolutionSolde(etat, compte, debut, fin) {
   const ref = etat.reference[compte];
   if (!ref) return [];
   const mouvements = [];
+  const ajouter = (op, centimes) => mouvements.push({ date: op.date, apres: op.ts > ref.ts, centimes });
   for (const brute of etat.operations) {
     const op = effective(etat, brute);
-    if (op.compte === compte && compteDansSolde(etat, brute)) mouvements.push({ date: op.date, centimes: op.sens === 'entree' ? op.centimes : -op.centimes });
+    if (op.compte !== compte || etat.ajouts[op.id]?.supprime) continue;
+    ajouter(op, op.sens === 'entree' ? op.centimes : -op.centimes);
   }
   if (compte === 'especes') {
-    for (const l of lister(etat)) if (l.alimenteEspeces) mouvements.push({ date: l.date, centimes: l.centimes });
+    for (const brute of etat.operations) {
+      const op = effective(etat, brute);
+      if (!etat.ajouts[op.id]?.supprime && estRetrait(etat, brute)) ajouter(op, op.centimes);
+    }
   }
   const points = [];
   for (let d = debut; d <= fin; d = ajouterJours(d, 1)) {
-    points.push({ date: d, centimes: ref.centimes + mouvements.filter((m) => m.date <= d).reduce((s, m) => s + m.centimes, 0) });
+    let c = ref.centimes;
+    for (const m of mouvements) {
+      if (m.apres && m.date <= d) c += m.centimes;
+      else if (!m.apres && m.date > d) c -= m.centimes;
+    }
+    points.push({ date: d, centimes: c });
     if (points.length > 5000) break;
   }
   return points;

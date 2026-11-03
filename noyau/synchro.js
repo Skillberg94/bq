@@ -7,7 +7,9 @@
 // Le noyau ne lit pas les mails lui-même : on lui passe `lire` (message -> { id, ts, objet, texte })
 // et `extraire` (l'extraction testée de test-gmail/extraction.js).
 
-import { fusionnerMails } from './donnees.js';
+import { fusionnerMails } from './donnees.js?v=1197e14a1b2e';
+import { estIgnore } from './reglages.js?v=1197e14a1b2e';
+import { validerAttentes } from './attentes.js?v=1197e14a1b2e';
 
 export const LIMITE = 50;
 export const MARGE_MS = 60 * 60 * 1000; // on redemande 1 h en arrière : l'anti-doublon écarte ce qui est déjà connu
@@ -23,7 +25,7 @@ export function apresTsPour(etat) {
 
 /**
  * Range les messages reçus dans l'état. Rend { etat, rapport }.
- * rapport : { ajoutees: [ids], dejaVues, ignorees: [{ id, raison, libelle? }], alertes: [{ id, alerte }], erreurs: [{ id, message }], limiteAtteinte }
+ * rapport : { ajoutees: [ids], validees: [{ attente, mail, centimes }], dejaVues, ignorees: [{ id, raison, libelle? }], alertes: [{ id, alerte }], erreurs: [{ id, message }], limiteAtteinte }
  * Un message illisible n'est ni ajouté ni marqué ignoré : il sera relu à la prochaine synchro.
  */
 export function synchroniser(etat, messages, { lire, extraire, maintenant }) {
@@ -48,6 +50,8 @@ export function synchroniser(etat, messages, { lire, extraire, maintenant }) {
     if (connus.has(m.id)) { rapport.dejaVues += 1; plusRecent = Math.max(plusRecent, m.ts); continue; }
     connus.add(m.id);
     const op = extraire({ id: m.id, objet: m.objet, texte: m.texte });
+    // Libellés ignorés ajoutés par le propriétaire (page Réglages).
+    if (!op.ignore && estIgnore(etat, op.libelle)) op.ignore = 'libellé ignoré (réglages)';
     if (op.ignore) {
       ignores.push(m.id);
       rapport.ignorees.push({ id: m.id, raison: op.ignore, ...(op.libelle && { libelle: op.libelle }) });
@@ -58,8 +62,11 @@ export function synchroniser(etat, messages, { lire, extraire, maintenant }) {
     plusRecent = Math.max(plusRecent, m.ts);
   }
 
-  const { etat: suivant, ajoutees } = fusionnerMails(etat, nouvelles);
-  rapport.ajoutees = ajoutees.map((o) => o.id);
+  const fusion = fusionnerMails(etat, nouvelles);
+  rapport.ajoutees = fusion.ajoutees.map((o) => o.id);
+  // Paiements CB en attente : un prélèvement du même montant les valide (noyau/attentes.js).
+  const { etat: suivant, validees } = validerAttentes(fusion.etat, rapport.ajoutees);
+  rapport.validees = validees;
   // Ne jamais avancer au-delà d'un message illisible : il doit être redemandé.
   const dernierTs = Math.min(plusRecent, plusAncienEnErreur - 1);
   return {

@@ -88,6 +88,37 @@ export async function lireCoffre(stockage, cle) {
 }
 
 /**
+ * Changer le mot de passe (03/11/2026) : vérifie l'ancien, prépare le nouveau coffre (en-tête + données chiffrées) en
+ * entier AVANT d'écrire, écrit les deux d'un coup, relit avec le nouveau mot de passe ; au moindre problème, l'ancien
+ * coffre est remis tel quel. Rend la nouvelle clé de données. Les fichiers de sauvegarde déjà faits gardent l'ancien
+ * mot de passe (ils ont leur propre en-tête).
+ */
+export async function changerMotDePasse(stockage, ancien, nouveau, confirmation, { iterations = ITERATIONS } = {}) {
+  verifierMotDePasse(nouveau, confirmation);
+  const ancienneEntete = stockage.getItem(CLE_ENTETE);
+  const anciennesDonnees = stockage.getItem(CLE_DONNEES);
+  if (ancienneEntete === null) throw new Error('Aucun coffre dans ce téléphone.');
+  const contenu = await lireCoffre(stockage, await ouvrirCoffre(ancien, JSON.parse(ancienneEntete))); // refuse un mauvais ancien mot de passe
+  const { entete, cle } = await creerCoffre(nouveau, { iterations });
+  const paquet = JSON.stringify(await chiffrer(cle, contenu));
+  const remettre = () => {
+    stockage.setItem(CLE_ENTETE, ancienneEntete);
+    if (anciennesDonnees === null) stockage.removeItem(CLE_DONNEES);
+    else stockage.setItem(CLE_DONNEES, anciennesDonnees);
+  };
+  try {
+    stockage.setItem(CLE_DONNEES, paquet);
+    stockage.setItem(CLE_ENTETE, JSON.stringify(entete));
+    const relu = await lireCoffre(stockage, await ouvrirCoffre(nouveau, entete));
+    if (JSON.stringify(relu) !== JSON.stringify(contenu)) throw new Error('relecture différente');
+  } catch (e) {
+    remettre();
+    throw new Error('Changement impossible, ton ancien mot de passe reste valable (' + e.message + ').');
+  }
+  return cle;
+}
+
+/**
  * Première mise en place : chiffre le contenu actuel (données jusque-là en clair), vérifie qu'on sait le relire,
  * et SEULEMENT ENSUITE efface les anciennes clés en clair. Rien n'est effacé si la vérification échoue.
  */

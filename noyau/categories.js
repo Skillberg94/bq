@@ -3,9 +3,9 @@
 // Règle : la catégorie d'une ligne = celle choisie sur la ligne, sinon celle retenue pour son libellé.
 // Classer un émetteur reclasse donc aussi ses anciennes lignes (sauf celles où une catégorie a été choisie à la main).
 
-import { effective, estRetrait } from './soldes.js';
-import { normaliserLibelle } from './libelles.js';
-import { recurrentDe } from './recurrents.js';
+import { effective, estRetrait } from './soldes.js?v=1197e14a1b2e';
+import { normaliserLibelle } from './libelles.js?v=1197e14a1b2e';
+import { recurrentDe } from './recurrents.js?v=1197e14a1b2e';
 
 export { normaliserLibelle };
 
@@ -13,6 +13,18 @@ export { normaliserLibelle };
 export const CATEGORIES_DEFAUT = [
   'Courses', 'Restauration', 'Logement', 'Transport', 'Abonnements', 'Santé', 'Loisirs', 'Shopping', 'Frais et administratif', 'Autre',
 ];
+
+// Icône de chaque catégorie (« logo » : nom d'une icône du dossier suivi-depense/icones, sans « icone- » ni « .png »),
+// celles choisies avec le propriétaire pour les catégories de départ (caddie pour les courses, 02/11/2026).
+export const ICONES = ['shopping', 'restaurant', 'logement', 'transport', 'forfait', 'sante', 'sport', 'frais-administratif', 'autre', 'virement', 'retrait', 'piece'];
+const ICONES_DEPART = {
+  courses: 'shopping', restauration: 'restaurant', logement: 'logement', transport: 'transport', abonnements: 'forfait',
+  sante: 'sante', loisirs: 'sport', shopping: 'shopping', 'frais-et-administratif': 'frais-administratif', autre: 'autre',
+};
+export function iconeCategorie(etat, id) {
+  if (id === null || id === undefined || id === 'a-classer') return 'a-classe';
+  return etat.categories.find((c) => c.id === id)?.logo ?? ICONES_DEPART[id] ?? 'autre';
+}
 
 const sansAccents = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '');
 

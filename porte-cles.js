@@ -27,3 +27,9 @@ async function agir(mode, action) {
 export const lireCle = () => agir('readonly', (m) => m.get(NOM)).then((c) => c ?? null).catch(() => null);
 export const rangerCle = (cle) => agir('readwrite', (m) => m.put(cle, NOM));
 export const effacerCle = () => agir('readwrite', (m) => m.delete(NOM));
+
+// Clé des écrans publiés chiffrés (03/11/2026) : tirée du mot de passe de l'app, demandée une seule fois par appareil.
+const NOM_ECRANS = 'ecrans';
+export const lireCleEcrans = () => agir('readonly', (m) => m.get(NOM_ECRANS)).then((c) => c ?? null).catch(() => null);
+export const rangerCleEcrans = (cle) => agir('readwrite', (m) => m.put(cle, NOM_ECRANS));
+export const effacerCleEcrans = () => agir('readwrite', (m) => m.delete(NOM_ECRANS));

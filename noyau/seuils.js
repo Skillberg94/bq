@@ -7,8 +7,9 @@
 //     pas les frais récurrents (ils sont distincts du seuil), pas les lignes supprimées.
 // État : seuils: { moisCentimes: number | null }
 
-import { effective, estRetrait } from './soldes.js';
-import { recurrentDe } from './recurrents.js';
+import { effective, estRetrait } from './soldes.js?v=1197e14a1b2e';
+import { recurrentDe } from './recurrents.js?v=1197e14a1b2e';
+import { categorieDe } from './categories.js?v=1197e14a1b2e';
 
 const pad = (n) => String(n).padStart(2, '0');
 const enDate = (s) => new Date(Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))));
@@ -52,6 +53,48 @@ export function depensesPeriode(etat, periode, date) {
     if (a.supprime || op.sens !== 'sortie' || estRetrait(etat, brute)) continue;
     if (op.date < debut || op.date > fin) continue;
     if (recurrentDe(etat, brute)) continue;
+    total += op.centimes;
+  }
+  return total;
+}
+
+// ---- Seuils par catégorie et niveau d'alerte (page « Seuils & alertes », 03/11/2026)
+// Choix du propriétaire : un seuil par catégorie, en euros ou en % du seuil du mois, DANS le seuil du mois (la somme des
+// seuils des catégories ne dépasse pas le seuil du mois) ; avertissement orange réglable 70 / 80 / 90 %, rouge au dépassement.
+// État : seuils: { moisCentimes, categories?: { [id catégorie]: centimes }, alerte?: 70 | 80 | 90 }
+
+export const NIVEAUX_ALERTE = [70, 80, 90];
+export const ALERTE_DEFAUT = 80; // proposé par Claude, à valider par le propriétaire
+
+export const niveauAlerte = (etat) => etat.seuils?.alerte ?? ALERTE_DEFAUT;
+export const seuilsCategories = (etat) => etat.seuils?.categories ?? {};
+
+export function definirAlerte(etat, pourcent) {
+  if (!NIVEAUX_ALERTE.includes(pourcent)) throw new Error('niveau d\'alerte invalide (70, 80 ou 90)');
+  return { ...etat, seuils: { ...etat.seuils, alerte: pourcent } };
+}
+
+/** Seuil d'une catégorie (centimes, ou null pour le retirer). Refusé si la somme dépasse le seuil du mois. */
+export function definirSeuilCategorie(etat, categorie, centimes) {
+  if (!etat.categories.some((c) => c.id === categorie)) throw new Error('catégorie introuvable : ' + categorie);
+  const { [categorie]: _, ...autres } = seuilsCategories(etat);
+  if (centimes === null) return { ...etat, seuils: { ...etat.seuils, categories: autres } };
+  if (!Number.isInteger(centimes) || centimes <= 0) throw new Error('Le seuil de la catégorie doit être un montant positif.');
+  const mois = etat.seuils.moisCentimes;
+  if (mois === null || mois === undefined) throw new Error('Règle d\'abord le seuil du mois.');
+  const deja = Object.values(autres).reduce((s, c) => s + c, 0);
+  if (deja + centimes > mois) throw new Error('Les seuils des catégories dépasseraient le seuil du mois (il reste ' + ((mois - deja) / 100).toFixed(2).replace('.', ',') + ' € à répartir).');
+  return { ...etat, seuils: { ...etat.seuils, categories: { ...autres, [categorie]: centimes } } };
+}
+
+/** Dépenses d'une catégorie comptées dans le seuil (mêmes règles que la jauge), dates incluses. null = « à classer ». */
+export function depensesCategorie(etat, categorie, debut, fin) {
+  let total = 0;
+  for (const brute of etat.operations) {
+    const op = effective(etat, brute);
+    const a = etat.ajouts[op.id] ?? {};
+    if (a.supprime || op.sens !== 'sortie' || estRetrait(etat, brute) || op.date < debut || op.date > fin) continue;
+    if (recurrentDe(etat, brute) || categorieDe(etat, brute) !== categorie) continue;
     total += op.centimes;
   }
   return total;

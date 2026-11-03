@@ -1,20 +1,24 @@
 // Page de test : état du téléphone, mémoire, connexion Gmail, export.
-import { tableaux } from './noyau/tableaux.js';
-import { enCsv } from './noyau/csv.js';
-import { feuillesXlsx } from './noyau/xlsx.js';
-import { etatDeTest } from './donnees-test.js';
-import { charger, definirReference, soldes, lister, ajouterManuel, CLE_STOCKAGE } from './noyau/donnees.js';
-import { jauge, definirSeuilMois } from './noyau/seuils.js';
-import { dateLocale } from './noyau/dates.js';
-import { coffreExiste, lireEntete, ouvrirCoffre, lireCoffre, ecrireCoffre, installerCoffre, verifierMotDePasse } from './noyau/coffre.js';
-import { lireCle, rangerCle, effacerCle } from './porte-cles.js';
+import { tableaux } from './noyau/tableaux.js?v=1197e14a1b2e';
+import { enCsv } from './noyau/csv.js?v=1197e14a1b2e';
+import { feuillesXlsx } from './noyau/xlsx.js?v=1197e14a1b2e';
+import { etatDeTest } from './donnees-test.js?v=1197e14a1b2e';
+import { charger, definirReference, soldes, lister, ajouterManuel, CLE_STOCKAGE } from './noyau/donnees.js?v=1197e14a1b2e';
+import { jauge, definirSeuilMois } from './noyau/seuils.js?v=1197e14a1b2e';
+import { dateLocale } from './noyau/dates.js?v=1197e14a1b2e';
+import { coffreExiste, lireEntete, ouvrirCoffre, lireCoffre, ecrireCoffre, installerCoffre, verifierMotDePasse, changerMotDePasse } from './noyau/coffre.js?v=1197e14a1b2e';
+import { lireCle, rangerCle, effacerCle, lireCleEcrans, rangerCleEcrans, effacerCleEcrans } from './porte-cles.js?v=1197e14a1b2e';
+import { cleEcrans, cleValide } from './noyau/ecrans-chiffres.js?v=1197e14a1b2e';
 import {
   creerSauvegarde, nomDeFichier, lireSauvegarde, ouvrirSauvegarde, restaurer, restaurationAnnulable, annulerRestauration, rappelSauvegarde,
-} from './noyau/sauvegarde.js';
-import { synchroniser, apresTsPour, LIMITE } from './noyau/synchro.js';
-import { enCentimes, enEuros } from './noyau/montants.js';
-import { aClasser } from './noyau/categories.js';
+} from './noyau/sauvegarde.js?v=1197e14a1b2e';
+import { synchroniser, apresTsPour, LIMITE } from './noyau/synchro.js?v=1197e14a1b2e';
+import { enCentimes, enEuros } from './noyau/montants.js?v=1197e14a1b2e';
+import { aClasser } from './noyau/categories.js?v=1197e14a1b2e';
+import { rappelJours } from './noyau/reglages.js?v=1197e14a1b2e';
+import { demarrerEcrans, demanderMotDePasse as demanderMdpEcran, demanderConfirmation } from './ecrans.js?v=1197e14a1b2e';
 
+window.BQ_DEMARRE = true; // tous les modules sont chargés (voir la sécurité du chargement dans index.html)
 const $ = (id) => document.getElementById(id);
 // Le message garde sa mise en forme de base (attribut data-base) en plus de sa couleur.
 const dit = (id, texte, classe = 'info') => { const e = $(id); e.textContent = texte; e.className = (e.dataset.base ? e.dataset.base + ' ' : '') + classe; };
@@ -132,6 +136,7 @@ const enregistrer = () => ecrireCoffre(stockage, cleDonnees, contenu).catch((e) 
 // Écran du mot de passe : création (première fois) ou ouverture (clé absente du téléphone). Rend la clé de données.
 function demanderMotDePasse(creation) {
   $('verrou').hidden = false;
+  $('chargement').hidden = true; // l'écran du mot de passe passe devant le chargement
   $('mdp2').hidden = !creation;
   $('verrou-sauvegarde').hidden = false; // restaurer depuis l'écran du mot de passe (nouveau téléphone, données effacées)
   $('mdp').autocomplete = creation ? 'new-password' : 'current-password';
@@ -142,6 +147,7 @@ function demanderMotDePasse(creation) {
   return new Promise((resoudre) => {
     $('mdp-ok').onclick = async () => {
       const mdp = $('mdp').value;
+      motDePasseOuverture = mdp; // gardé en mémoire le temps d'ouvrir les écrans chiffrés (jamais écrit)
       try {
         verifierMotDePasse(mdp, creation ? $('mdp2').value : undefined);
         dit('verrou-message', creation ? 'Chiffrement de tes données…' : 'Vérification…');
@@ -159,6 +165,7 @@ function demanderMotDePasse(creation) {
         $('mdp').value = '';
         $('mdp2').value = '';
         $('verrou').hidden = true;
+        $('chargement').hidden = false;
         resoudre(cle);
       } catch (e) {
         dit('verrou-message', e.message, 'ko');
@@ -181,7 +188,7 @@ async function ouvrirApp() {
   }
   try { await rangerCle(cleDonnees); } catch { /* sans IndexedDB : le mot de passe sera redemandé à chaque ouverture */ }
   contenu = (await lireCoffre(stockage, cleDonnees)) ?? { etat: charger(stockage).etat, pont: { url: '', cle: '' } };
-  $('app').hidden = false;
+  // La page provisoire n'est montrée qu'à la fin, s'il n'y a pas d'écrans Tool Design (voir la fin du fichier).
 }
 
 // ---- Sauvegarde et restauration
@@ -240,15 +247,40 @@ async function sauvegarder(partager) {
 $('sauvegarde-partager').onclick = () => sauvegarder(true);
 $('sauvegarde-telecharger').onclick = () => sauvegarder(false);
 function afficherRappel() {
-  const texte = rappelSauvegarde(contenu, Date.now());
+  const texte = rappelJours(contenu.etat) === null ? null : rappelSauvegarde(contenu, Date.now(), rappelJours(contenu.etat));
   $('rappel-sauvegarde').textContent = texte ? texte + ' Pense à en faire une (menu, Sauvegarde).' : '';
   $('resto-annuler-bloc').hidden = !restaurationAnnulable(stockage);
+}
+
+// Mot de passe tapé à l'ouverture (écran du mot de passe) : sert une fois à tirer la clé des écrans, puis est oublié.
+let motDePasseOuverture = null;
+/** Clé des écrans publiés chiffrés : celle gardée dans le téléphone, sinon tirée du mot de passe de l'app (une fois). */
+async function cleDesEcrans(coffre) {
+  const rangee = await lireCleEcrans();
+  if (rangee && (await cleValide(rangee, coffre.controle))) return rangee;
+  let mdp = motDePasseOuverture;
+  motDePasseOuverture = null;
+  for (let essai = 0; essai < 5; essai++) {
+    if (!mdp) {
+      // La petite fenêtre passe devant le chargement en or (qui reste derrière).
+      mdp = await demanderMdpEcran(essai === 0 ? 'Mot de passe de l’app (une seule fois, pour ouvrir les écrans)' : 'Mot de passe incorrect, réessaie');
+      if (mdp === null) throw new Error('écrans non ouverts (mot de passe non saisi)');
+    }
+    const cle = await cleEcrans(mdp, coffre.sel, coffre.iterations);
+    mdp = null;
+    if (await cleValide(cle, coffre.controle)) {
+      try { await rangerCleEcrans(cle); } catch { /* sans IndexedDB : redemandé à la prochaine ouverture */ }
+      return cle;
+    }
+  }
+  throw new Error('mot de passe des écrans incorrect');
 }
 
 $('verrouiller').onclick = async () => {
   // Confirmation : un appui involontaire ne doit rien verrouiller.
   if (!confirm('Verrouiller l\'app ? Ton mot de passe sera redemandé à la prochaine ouverture.')) return;
   await effacerCle().catch(() => {});
+  await effacerCleEcrans().catch(() => {});
   location.reload();
 };
 
@@ -276,16 +308,22 @@ $('pont-lire').onclick = async () => {
 
 // ---- Lecteur Tool Design (brique 13, test de l'enveloppe) : chargé seulement quand on le demande.
 let vueLecteur = null;
+let lecteurEnCours = null;
 function chargerLecteur() {
   if (window.BQLecteurPret) return window.BQLecteurPret;
-  return new Promise((ok, ko) => {
+  if (lecteurEnCours) return lecteurEnCours;
+  lecteurEnCours = new Promise((ok, ko) => {
     window.BQ_LECTEUR_BASE = 'lecteur/';
-    const script = document.createElement('script');
-    script.src = 'lecteur/lecteur.js';
-    script.onload = () => window.BQLecteurPret.then(ok, ko);
-    script.onerror = () => ko(new Error('lecteur introuvable'));
-    document.head.append(script);
+    // Empreinte du lecteur fabriqué (construire-site.mjs) : un lecteur refait n'est jamais pris dans le cache.
+    fetch('lecteur/version.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})).then((v) => {
+      const script = document.createElement('script');
+      script.src = 'lecteur/lecteur.js' + (v.empreinte ? '?v=' + v.empreinte : '');
+      script.onload = () => window.BQLecteurPret.then(ok, ko);
+      script.onerror = () => ko(new Error('lecteur introuvable'));
+      document.head.append(script);
+    });
   });
+  return lecteurEnCours;
 }
 $('lecteur-afficher').onclick = async () => {
   try {
@@ -326,7 +364,7 @@ function afficherComptes() {
     $(id).textContent = v === null ? 'solde de départ à saisir (menu)' : enEuros(v);
     $(id).className = 'montant' + (v === null ? ' vide' : '');
   }
-  const depenses = lister(etat).filter((l) => l.sens === 'sortie').slice(0, 5);
+  const depenses = lister(etat); // tout l'historique, dépenses et entrées (demande du propriétaire)
   $('depenses').textContent = depenses.length ? '' : "Aucune dépense pour l'instant.";
   for (const l of depenses) {
     const ligne = document.createElement('div');
@@ -343,7 +381,8 @@ function afficherComptes() {
     ].filter(Boolean);
     for (const t of etiquettes) { const e = document.createElement('span'); e.className = 'badge'; e.textContent = t; date.append(e); }
     milieu.append(lib, date);
-    const mt = document.createElement('div'); mt.className = 'mt'; mt.textContent = enEuros(-l.centimes);
+    const mt = document.createElement('div'); mt.className = 'mt'; mt.textContent = enEuros(l.sens === 'sortie' ? -l.centimes : l.centimes, { signe: true });
+    if (l.sens !== 'sortie') mt.style.color = '#6ee7a0';
     ligne.append(milieu, mt);
     $('depenses').append(ligne);
   }
@@ -420,11 +459,15 @@ $('saisie-ajouter').onclick = async () => {
 
 let derniereTentative = 0;
 let enCours = false;
+let ecrans = null; // écrans Tool Design (version d'essai locale), voir la fin du fichier
 async function synchroAuto(forcer = false) {
-  if (!contenu) return; // coffre pas encore ouvert (écran du mot de passe affiché)
+  if (!contenu) return null; // coffre pas encore ouvert (écran du mot de passe affiché)
   const { url, cle } = contenu.pont;
-  if (!url || !cle) { dit('synchro', 'Pour la synchro, renseigne le pont dans le menu (Pont Apps Script).', 'ko'); return; }
-  if (enCours || (!forcer && Date.now() - derniereTentative < 30000)) return;
+  if (!url || !cle) {
+    dit('synchro', 'Pour la synchro, règle d\'abord le pont (adresse et clé).', 'ko');
+    return { ok: false, message: 'Pour la synchro, règle d\'abord le pont (Réglages, « Régler le pont »).' };
+  }
+  if (enCours || (!forcer && Date.now() - derniereTentative < 30000)) return null;
   enCours = true;
   derniereTentative = Date.now();
   dit('synchro', 'Synchro…');
@@ -441,12 +484,16 @@ async function synchroAuto(forcer = false) {
     if (p.ignorees.length) texte += ', ' + p.ignorees.length + ' ignorée(s)';
     if (p.erreurs.length) texte += ', ' + p.erreurs.length + ' illisible(s), relue(s) à la prochaine synchro';
     if (p.alertes.length) texte += ', ' + p.alertes.length + ' à vérifier (signe du montant)';
+    if (p.validees?.length) texte += ', ' + p.validees.length + (p.validees.length > 1 ? ' paiements CB en attente validés' : ' paiement CB en attente validé');
     if (p.limiteAtteinte) texte += '. Attention : ' + LIMITE + ' alertes reçues d\'un coup, il peut en manquer.';
     dit('synchro', texte, p.erreurs.length || p.limiteAtteinte ? 'ko' : 'ok');
+    return { ok: !(p.erreurs.length || p.limiteAtteinte), message: texte };
   } catch (e) {
     dit('synchro', 'Synchro impossible : ' + e.message, 'ko');
+    return { ok: false, message: 'Synchro impossible : ' + e.message };
   } finally {
     enCours = false;
+    ecrans?.rafraichir();
   }
 }
 
@@ -523,3 +570,129 @@ $('xlsx-partager').onclick = () => exporter('xlsx', true);
 $('xlsx-telecharger').onclick = () => exporter('xlsx', false);
 $('csv-partager').onclick = () => exporter('csv', true);
 $('csv-telecharger').onclick = () => exporter('csv', false);
+
+// ---- 5. Écrans Tool Design (version d'essai locale : site-essai/, avec les dessins du template « suivi-depense »).
+// Sans les dessins (site publié), rien ne change : la page provisoire ci-dessus reste affichée.
+function periodeExport(periode) {
+  const auj = dateLocale(Date.now());
+  if (periode === 'annee') return { debut: auj.slice(0, 4) + '-01-01', fin: auj.slice(0, 4) + '-12-31', nom: auj.slice(0, 4) };
+  if (periode === 'mois') return { debut: auj.slice(0, 8) + '01', fin: auj.slice(0, 8) + '31', nom: auj.slice(0, 7) };
+  return null;
+}
+async function exporterDonnees(format, periode) {
+  const p = periodeExport(periode);
+  const etat = contenu.etat;
+  // Période choisie : seules les opérations de la période partent (frais, catégories et soldes restent ceux d'aujourd'hui).
+  const choisi = p ? { ...etat, operations: etat.operations.filter((o) => o.date >= p.debut && o.date <= p.fin) } : etat;
+  const t = tableaux(choisi, dateLocale(Date.now()));
+  const nom = 'bq-export-' + (p ? p.nom : 'tout') + '-' + dateLocale(Date.now());
+  if (format === 'csv') return livrer(nom + '.csv', new Blob([enCsv(t[0])], { type: 'text/csv;charset=utf-8' }), true).then(repli(nom + '.csv', () => new Blob([enCsv(t[0])], { type: 'text/csv;charset=utf-8' })));
+  const { default: writeExcelFile } = await import('write-excel-file/browser');
+  const blob = await writeExcelFile(feuillesXlsx(t)).toBlob();
+  return livrer(nom + '.xlsx', blob, true).then(repli(nom + '.xlsx', () => blob));
+}
+// Partage d'abord (Fichiers, iCloud Drive sur l'iPhone) ; sans partage (ordinateur), téléchargement.
+const repli = (nom, blob) => (r) => (r.ok || !/pas disponible/.test(r.message) ? r : livrer(nom, blob(), false));
+
+function choisirFichier() {
+  return new Promise((ok) => {
+    const champ = document.createElement('input');
+    champ.type = 'file';
+    champ.accept = '.json,application/json';
+    champ.onchange = () => ok(champ.files && champ.files[0] ? champ.files[0] : null);
+    champ.click();
+  });
+}
+
+async function lancerEcrans() {
+  try {
+    return await demarrerEcrans({
+      lecteur: chargerLecteur,
+      cleEcrans: cleDesEcrans,
+      etat: () => contenu.etat,
+      changerEtat: async (etat) => { contenu.etat = etat; await enregistrer(); afficherComptes(); },
+      synchroniser: (forcer) => synchroAuto(forcer).then((r) => r ?? { ok: true, message: 'Synchro déjà en cours…' }),
+      texteSynchro: () => $('synchro').textContent,
+      rappel: () => (rappelJours(contenu.etat) === null ? '' : rappelSauvegarde(contenu, Date.now(), rappelJours(contenu.etat)) ?? ''),
+      pontRegle: () => !!(contenu.pont.url && contenu.pont.cle),
+      enregistrerPont: async (url, cle) => {
+        // La clé n'est jamais envoyée ailleurs que chez Google Apps Script.
+        if (!url.startsWith('https://script.google.com/macros/s/')) return { ok: false, message: 'L\'adresse doit commencer par https://script.google.com/macros/s/' };
+        contenu.pont = { url, cle: cle || contenu.pont.cle };
+        if (!contenu.pont.cle) return { ok: false, message: 'Tape aussi la clé secrète du pont.' };
+        await enregistrer();
+        return synchroAuto(true).then((r) => r ?? { ok: true, message: 'Pont enregistré.' });
+      },
+      sauvegarder: async () => {
+        const maintenant = Date.now();
+        const { fichier, contenu: aJour } = await creerSauvegarde(stockage, cleDonnees, contenu, maintenant);
+        const blob = new Blob([JSON.stringify(fichier)], { type: 'application/json' });
+        const r = await livrer(nomDeFichier(maintenant), blob, true).then(repli(nomDeFichier(maintenant), () => blob));
+        if (r.ok) { contenu = aJour; await enregistrer(); afficherRappel(); } // date notée seulement si le fichier est bien parti
+        return r;
+      },
+      restaurer: async () => {
+        const f = await choisirFichier();
+        if (!f) return { ok: false, message: 'Aucun fichier choisi.' };
+        const fichier = lireSauvegarde(await f.text());
+        const mdp = await demanderMdpEcran('Mot de passe de cette sauvegarde');
+        if (mdp === null) return { ok: false, message: 'Restauration annulée.' };
+        const o = await ouvrirSauvegarde(fichier, mdp);
+        const r = o.resume;
+        if (!(await demanderConfirmation('Sauvegarde du ' + dateFr(r.cree) + ' : ' + r.operations + ' opération(s).\n\nRemplacer tes données actuelles ? Une copie de sécurité est gardée.', 'Oui, remplacer'))) return { ok: false, message: 'Restauration annulée.' };
+        await restaurer(stockage, fichier, o.cle);
+        try { await rangerCle(o.cle); } catch { /* le mot de passe sera redemandé */ }
+        setTimeout(() => location.reload(), 900);
+        return { ok: true, message: 'Restauré. Ouverture…' };
+      },
+      annulerRestauration: async () => {
+        if (!restaurationAnnulable(stockage)) return { ok: false, message: 'Aucune restauration à annuler.' };
+        if (!(await demanderConfirmation('Revenir aux données d\'avant la dernière restauration ? Le mot de passe de ces données te sera demandé.', 'Oui, revenir'))) return { ok: false, message: 'Rien n\'a changé.' };
+        annulerRestauration(stockage);
+        await effacerCle().catch(() => {});
+        location.reload();
+        return { ok: true, message: 'Retour aux données d\'avant…' };
+      },
+      restaurationAnnulable: () => restaurationAnnulable(stockage),
+      derniereSauvegarde: () => contenu.sauvegarde?.derniere ?? null,
+      exporter: exporterDonnees,
+      verrouiller: async () => { await effacerCle().catch(() => {}); await effacerCleEcrans().catch(() => {}); location.reload(); return { ok: true, message: 'Verrouillage…' }; },
+      changerMotDePasse: async () => {
+        const ancien = await demanderMdpEcran('Mot de passe actuel');
+        if (ancien === null) return { ok: false, message: 'Rien n’a changé.' };
+        const nouveau = await demanderMdpEcran('Nouveau mot de passe (10 caractères minimum)');
+        if (nouveau === null) return { ok: false, message: 'Rien n’a changé.' };
+        const confirmation = await demanderMdpEcran('Le nouveau, une deuxième fois');
+        if (confirmation === null) return { ok: false, message: 'Rien n’a changé.' };
+        try {
+          cleDonnees = await changerMotDePasse(stockage, ancien, nouveau, confirmation);
+          try { await rangerCle(cleDonnees); } catch { /* le mot de passe sera redemandé à la prochaine ouverture */ }
+          return { ok: true, message: 'Mot de passe changé. Les sauvegardes déjà faites gardent l’ancien.' };
+        } catch (e) {
+          return { ok: false, message: e.message };
+        }
+      },
+    });
+  } catch (e) {
+    // Écrans impossibles à afficher : on garde la page provisoire, avec la raison.
+    $('app').hidden = false;
+    document.querySelector('header.entete').style.display = '';
+    document.body.classList.remove('avec-ecrans');
+    $('ecrans').hidden = true;
+    dit('synchro', 'Écrans Tool Design : ' + e.message, 'ko');
+    return null;
+  }
+}
+// ?provisoire dans l'adresse : la page provisoire, même avec les écrans (pour comparer, ou en secours).
+// ?donnees-essai, sur l'ordinateur seulement (localhost) : remplace les données par des données inventées.
+const parametres = new URLSearchParams(location.search);
+if (parametres.has('donnees-essai') && ['localhost', '127.0.0.1'].includes(location.hostname)) {
+  const { etatEssai } = await import('./donnees-essai.js?v=1197e14a1b2e');
+  contenu.etat = etatEssai(dateLocale(Date.now()));
+  await enregistrer();
+  history.replaceState(null, '', location.pathname);
+}
+if (!parametres.has('provisoire')) ecrans = await lancerEcrans();
+// Sans écrans (site publié, ?provisoire, ou erreur) : la page provisoire. Le chargement en or disparaît dans tous les cas.
+if (!ecrans) $('app').hidden = false;
+$('chargement').hidden = true;

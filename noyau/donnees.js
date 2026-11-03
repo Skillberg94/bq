@@ -11,9 +11,9 @@
 // }
 // ts = moment où l'opération touche le solde : date d'arrivée du mail (internalDate de Gmail) ou moment de la saisie.
 
-import { compteDansSolde, effective, estRetrait, retraitCompte, soldes } from './soldes.js';
-import { categoriesParDefaut, categorieDe } from './categories.js';
-import { recurrentDe } from './recurrents.js';
+import { compteDansSolde, effective, estRetrait, retraitCompte, soldes } from './soldes.js?v=1197e14a1b2e';
+import { categoriesParDefaut, categorieDe } from './categories.js?v=1197e14a1b2e';
+import { recurrentDe } from './recurrents.js?v=1197e14a1b2e';
 
 export { soldes };
 
@@ -124,6 +124,12 @@ export function marquerRetrait(etat, id, oui = true) {
   const { retrait, ...reste } = etat.ajouts[id] ?? {};
   return { ...etat, ajouts: { ...etat.ajouts, [id]: oui === null ? reste : { ...reste, retrait: !!oui } } };
 }
+
+/**
+ * Nom affiché d'une ligne (03/11/2026) : la description du propriétaire si elle existe, sinon le vrai émetteur saisi,
+ * sinon le libellé de la banque (jamais perdu : il reste visible dans le détail).
+ */
+export const nomAffiche = (l) => l.description || l.emetteurReel || l.libelle;
 
 /** Liste pour l'écran : la plus récente d'abord ; chaque ligne dit si elle compte dans le solde. */
 export function lister(etat, { avecSupprimees = false } = {}) {
