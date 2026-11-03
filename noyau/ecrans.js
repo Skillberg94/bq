@@ -6,21 +6,21 @@
 // rappel, saisies (texte des cases), dernier (dernière case tapée), valeurs (envoi d'une ligne touchée), ... }.
 // effet : ce que la page du navigateur doit faire elle-même (synchro, fichier, mot de passe…).
 
-import { lister, supprimer as supprimerLigne, modifier, nomAffiche, remettre, supprimerDefinitivement, corbeille } from './donnees.js?v=9ab598d26bbd';
+import { lister, supprimer as supprimerLigne, modifier, nomAffiche, remettre, supprimerDefinitivement, corbeille } from './donnees.js?v=37dffcf5cbd6';
 const modifierLigne = modifier;
-import { soldes } from './soldes.js?v=9ab598d26bbd';
-import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=9ab598d26bbd';
-import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle, ENTREES, nomEntrees, modifierEntrees } from './categories.js?v=9ab598d26bbd';
-import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=9ab598d26bbd';
-import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=9ab598d26bbd';
-import { attentes, estEnAttente } from './attentes.js?v=9ab598d26bbd';
-import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=9ab598d26bbd';
-import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=9ab598d26bbd';
-import { ajouterRegle, supprimerRegle } from './regles.js?v=9ab598d26bbd';
-import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenus, revenusDuMois, ajouterRevenu, modifierRevenu, supprimerRevenu, entreesRetenues } from './reglages.js?v=9ab598d26bbd';
-import { enEuros, enCentimes } from './montants.js?v=9ab598d26bbd';
-import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=9ab598d26bbd';
-import { valeursAccueil, ajouterDepense, periodeSuivante, avantSoldeDepart, MENTION_AVANT } from './contrat-accueil.js?v=9ab598d26bbd';
+import { soldes } from './soldes.js?v=37dffcf5cbd6';
+import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=37dffcf5cbd6';
+import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle, ENTREES, nomEntrees, modifierEntrees } from './categories.js?v=37dffcf5cbd6';
+import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=37dffcf5cbd6';
+import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=37dffcf5cbd6';
+import { attentes, estEnAttente } from './attentes.js?v=37dffcf5cbd6';
+import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=37dffcf5cbd6';
+import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=37dffcf5cbd6';
+import { ajouterRegle, supprimerRegle } from './regles.js?v=37dffcf5cbd6';
+import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenus, revenusDuMois, ajouterRevenu, modifierRevenu, supprimerRevenu, entreesRetenues } from './reglages.js?v=37dffcf5cbd6';
+import { enEuros, enCentimes } from './montants.js?v=37dffcf5cbd6';
+import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=37dffcf5cbd6';
+import { valeursAccueil, ajouterDepense, periodeSuivante, avantSoldeDepart, MENTION_AVANT } from './contrat-accueil.js?v=37dffcf5cbd6';
 
 export const PAGES = ['accueil', 'operations', 'categories', 'recurrents', 'seuils', 'objectifs', 'statistiques', 'soldes', 'sauvegarde', 'reglages'];
 
@@ -464,7 +464,7 @@ function vReglages(etat, ui, ctx) {
       detail: (r.unite === 'jour' ? euros(r.centimes) + ' par jour · ' + euros(attendu) + ' ce mois' : euros(r.centimes) + ' par mois') + ' · ' + (recu ? 'arrivé le ' + jourMois(recu.date) : 'attendu'),
       'revenu-nom': r.nom, 'revenu-montant': euros(r.centimes).replace(' €', ''), 'revenu-libelle': r.libelle,
     })),
-    'revenus-info': revenus(etat).length ? 'Touche un revenu pour le modifier ou le supprimer.' : 'Aucun revenu : ajoute ton salaire, France Travail…',
+    'revenus-info': revenus(etat).length ? 'Touche un revenu pour le modifier ou le supprimer.' : 'Aucun revenu : ajoute ton salaire, une prime…',
   } };
 }
 

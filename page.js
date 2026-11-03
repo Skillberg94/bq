@@ -1,22 +1,22 @@
 // Page de test : état du téléphone, mémoire, connexion Gmail, export.
-import { tableaux } from './noyau/tableaux.js?v=9ab598d26bbd';
-import { enCsv } from './noyau/csv.js?v=9ab598d26bbd';
-import { feuillesXlsx } from './noyau/xlsx.js?v=9ab598d26bbd';
-import { etatDeTest } from './donnees-test.js?v=9ab598d26bbd';
-import { charger, definirReference, soldes, lister, ajouterManuel, CLE_STOCKAGE } from './noyau/donnees.js?v=9ab598d26bbd';
-import { jauge, definirSeuilMois } from './noyau/seuils.js?v=9ab598d26bbd';
-import { dateLocale } from './noyau/dates.js?v=9ab598d26bbd';
-import { coffreExiste, lireEntete, ouvrirCoffre, lireCoffre, ecrireCoffre, installerCoffre, verifierMotDePasse, changerMotDePasse } from './noyau/coffre.js?v=9ab598d26bbd';
-import { lireCle, rangerCle, effacerCle, lireCleEcrans, rangerCleEcrans, effacerCleEcrans } from './porte-cles.js?v=9ab598d26bbd';
-import { cleEcrans, cleValide } from './noyau/ecrans-chiffres.js?v=9ab598d26bbd';
+import { tableaux } from './noyau/tableaux.js?v=37dffcf5cbd6';
+import { enCsv } from './noyau/csv.js?v=37dffcf5cbd6';
+import { feuillesXlsx } from './noyau/xlsx.js?v=37dffcf5cbd6';
+import { etatDeTest } from './donnees-test.js?v=37dffcf5cbd6';
+import { charger, definirReference, soldes, lister, ajouterManuel, CLE_STOCKAGE } from './noyau/donnees.js?v=37dffcf5cbd6';
+import { jauge, definirSeuilMois } from './noyau/seuils.js?v=37dffcf5cbd6';
+import { dateLocale } from './noyau/dates.js?v=37dffcf5cbd6';
+import { coffreExiste, lireEntete, ouvrirCoffre, lireCoffre, ecrireCoffre, installerCoffre, verifierMotDePasse, changerMotDePasse } from './noyau/coffre.js?v=37dffcf5cbd6';
+import { lireCle, rangerCle, effacerCle, lireCleEcrans, rangerCleEcrans, effacerCleEcrans } from './porte-cles.js?v=37dffcf5cbd6';
+import { cleEcrans, cleValide } from './noyau/ecrans-chiffres.js?v=37dffcf5cbd6';
 import {
   creerSauvegarde, nomDeFichier, lireSauvegarde, ouvrirSauvegarde, restaurer, restaurationAnnulable, annulerRestauration, rappelSauvegarde,
-} from './noyau/sauvegarde.js?v=9ab598d26bbd';
-import { synchroniser, apresTsPour, LIMITE } from './noyau/synchro.js?v=9ab598d26bbd';
-import { enCentimes, enEuros } from './noyau/montants.js?v=9ab598d26bbd';
-import { aClasser } from './noyau/categories.js?v=9ab598d26bbd';
-import { rappelJours } from './noyau/reglages.js?v=9ab598d26bbd';
-import { demarrerEcrans, demanderMotDePasse as demanderMdpEcran, demanderConfirmation } from './ecrans.js?v=9ab598d26bbd';
+} from './noyau/sauvegarde.js?v=37dffcf5cbd6';
+import { synchroniser, apresTsPour, LIMITE } from './noyau/synchro.js?v=37dffcf5cbd6';
+import { enCentimes, enEuros } from './noyau/montants.js?v=37dffcf5cbd6';
+import { aClasser } from './noyau/categories.js?v=37dffcf5cbd6';
+import { rappelJours } from './noyau/reglages.js?v=37dffcf5cbd6';
+import { demarrerEcrans, demanderMotDePasse as demanderMdpEcran, demanderConfirmation } from './ecrans.js?v=37dffcf5cbd6';
 
 window.BQ_DEMARRE = true; // tous les modules sont chargés (voir la sécurité du chargement dans index.html)
 const $ = (id) => document.getElementById(id);
@@ -688,7 +688,7 @@ async function lancerEcrans() {
 // ?donnees-essai, sur l'ordinateur seulement (localhost) : remplace les données par des données inventées.
 const parametres = new URLSearchParams(location.search);
 if (parametres.has('donnees-essai') && ['localhost', '127.0.0.1'].includes(location.hostname)) {
-  const { etatEssai } = await import('./donnees-essai.js?v=9ab598d26bbd');
+  const { etatEssai } = await import('./donnees-essai.js?v=37dffcf5cbd6');
   contenu.etat = etatEssai(dateLocale(Date.now()));
   await enregistrer();
   history.replaceState(null, '', location.pathname);

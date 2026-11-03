@@ -4,11 +4,12 @@
 // - actions : ce que l'app fait quand l'écran lui envoie une action (ajouter-depense, basculer-banque, changer-periode).
 // Aucun calcul de placement ici : l'écran (Tool Design) décide de tout l'affichage.
 
-import { soldes, lister, ajouterManuel, nomAffiche } from './donnees.js?v=9ab598d26bbd';
-import { jauge } from './seuils.js?v=9ab598d26bbd';
-import { aClasser, iconeCategorie } from './categories.js?v=9ab598d26bbd';
-import { attentes, estEnAttente } from './attentes.js?v=9ab598d26bbd';
-import { enEuros, enCentimes } from './montants.js?v=9ab598d26bbd';
+import { soldes, lister, ajouterManuel, nomAffiche } from './donnees.js?v=37dffcf5cbd6';
+import { jauge } from './seuils.js?v=37dffcf5cbd6';
+import { aClasser, iconeCategorie } from './categories.js?v=37dffcf5cbd6';
+import { attentes, estEnAttente } from './attentes.js?v=37dffcf5cbd6';
+import { revenusDuMois } from './reglages.js?v=37dffcf5cbd6';
+import { enEuros, enCentimes } from './montants.js?v=37dffcf5cbd6';
 
 // Ligne qui ne compte pas dans le solde parce qu'elle est d'avant le solde de référence (déjà incluse dans le solde
 // recopié de la banque) : la date le dit (03/11/2026, terme choisi par le propriétaire).
@@ -62,6 +63,11 @@ export function valeursAccueil(etat, ui) {
     'modif-date': l.date.slice(8, 10) + '/' + l.date.slice(5, 7) + '/' + l.date.slice(0, 4),
   }));
   const enAttente = attentes(etat).reduce((t, l) => t + l.centimes, 0);
+  // Revenus attendus ce mois-ci et pas encore arrivés (Réglages) : dès qu'un arrive, il sort de ce total (son virement
+  // est déjà dans le solde).
+  const attendu = ui.aujourdhui
+    ? revenusDuMois(etat, ui.aujourdhui.slice(0, 7), lister(etat).filter((l) => !l.supprime && l.sens === 'entree')).filter((x) => !x.recu).reduce((t, x) => t + x.attendu, 0)
+    : 0;
   return {
     linkVariables: {
       'solde-banque': s.banque === null ? 'à saisir' : enEuros(s.banque),
@@ -79,6 +85,7 @@ export function valeursAccueil(etat, ui) {
       'saisie-message': ui.saisieMessage ?? '',
       'saisie-banque': ouiNon((ui.saisieMode ?? (ui.saisieBanque ? 'attente' : 'especes')) !== 'especes'),
       'attente-total': enAttente ? enEuros(enAttente) : '', // vide : la ligne « En attente » de la carte banque est cachée
+      'attendu-total': attendu ? '+' + enEuros(attendu) : '', // vide : la ligne « Attendu » de la carte banque est cachée
       operations,
     },
     gaugeValues: { seuil: Math.min(pourcentage, 100), 'seuil-barre': Math.min(pourcentage, 100) },
