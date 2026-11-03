@@ -6,9 +6,9 @@
 //     (synchro, fichiers, mot de passe).
 // Les écrans ne sont présents que dans la version d'essai locale (site-essai/, node construire-site.mjs --essai) : sans
 // eux, demarrerEcrans rend null et la page provisoire reste affichée.
-import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=eafe534f6553';
-import { dateLocale } from './noyau/dates.js?v=eafe534f6553';
-import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=eafe534f6553';
+import { valeursEcran, agir, uiDepart, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=afc1385028cb';
+import { dateLocale } from './noyau/dates.js?v=afc1385028cb';
+import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=afc1385028cb';
 
 const $ = (id) => document.getElementById(id);
 const VERSION = 'essai local · 3 nov. 2026';
@@ -147,6 +147,8 @@ export async function demarrerEcrans(app) {
   let occupe = false;
   // Hauteur du clavier du téléphone quand il est ouvert (pixels), 0 sinon.
   let clavier = 0;
+  // Nombre de demandes « vider les cases » envoyées au lecteur.
+  let vidages = 0;
 
   const contexte = (valeurs = {}) => ({
     aujourdhui: dateLocale(Date.now()), maintenant: Date.now(), saisies, dernier, valeurs,
@@ -169,26 +171,33 @@ export async function demarrerEcrans(app) {
     const t = e.touches[0];
     glisse = e.touches.length === 1 && t ? { x: t.clientX, y: t.clientY, at: Date.now() } : null;
   }, { passive: true, capture: true });
-  // Dernière position du doigt (la fin du toucher ne la donne pas toujours).
+  // Reconnu pendant que le doigt bouge, sans attendre qu'il se lève : l'iPhone interrompt souvent un geste parti près
+  // du bord de l'écran (fin du toucher jamais reçue ; le glissé ne marchait pas sur l'iPhone du propriétaire).
   zone.addEventListener('touchmove', (e) => {
     const t = e.touches[0];
-    if (glisse && t) glisse.fin = { x: t.clientX, y: t.clientY };
-  }, { passive: true, capture: true });
-  zone.addEventListener('touchend', () => {
     const g = glisse;
-    glisse = null;
-    if (!g || !g.fin || !vue || Date.now() - g.at > 700) return;
-    const dx = g.fin.x - g.x;
-    const dy = g.fin.y - g.y;
+    if (!g || g.envoye || !t || !vue || e.touches.length !== 1) return;
+    if (Date.now() - g.at > 700) { glisse = null; return; }
+    const dx = t.clientX - g.x;
+    const dy = t.clientY - g.y;
     if (Math.abs(dx) < 70 || Math.abs(dx) < 2 * Math.abs(dy)) return;
+    g.envoye = true;
     vue.mettreAJour({ linkEvent: { name: dx > 0 ? 'ouvrir-menu' : 'fermer-menu', times: ++evenements } });
   }, { passive: true, capture: true });
+  const finGlisse = () => { glisse = null; };
+  zone.addEventListener('touchend', finGlisse, { passive: true, capture: true });
+  zone.addEventListener('touchcancel', finGlisse, { passive: true, capture: true });
 
   // Clavier ouvert (03/11/2026, « pouvoir encore monter et descendre quand je saisis, même sur un écran sans
   // défilement ») : l'écran peut défiler de la hauteur du clavier, comme dans les applications du téléphone. La fenêtre
   // visible rétrécit quand le clavier s'ouvre ; moins de 80 px d'écart : pas de clavier (barre du navigateur).
+  // L'iPhone, lui, fait remonter toute la page pour montrer la case (et on ne pouvait plus la bouger) : ce décalage
+  // (visualViewport.offsetTop) est compensé, la page reste à sa place et c'est le lecteur qui remonte la case au-dessus
+  // du clavier et laisse défiler l'écran.
   if (window.visualViewport) {
     const mesurer = () => {
+      const decale = Math.round(visualViewport.offsetTop);
+      zone.style.transform = decale > 0 ? `translateY(${decale}px)` : '';
       const ecart = Math.round(innerHeight - visualViewport.height);
       const h = ecart >= 80 ? ecart : 0;
       if (h === clavier) return;
@@ -196,6 +205,7 @@ export async function demarrerEcrans(app) {
       vue?.mettreAJour({ keyboardInset: clavier });
     };
     visualViewport.addEventListener('resize', mesurer);
+    visualViewport.addEventListener('scroll', mesurer);
   }
 
   // Changement de page : le même lecteur reçoit le nouveau dessin (plus rapide que de tout refaire). « remonter » refait
@@ -266,8 +276,11 @@ export async function demarrerEcrans(app) {
       if (r.aller && PAGES.includes(r.aller)) {
         await montrer(r.aller);
       } else if (r.vider && !r.erreur) {
-        // Le lecteur ne sait pas vider une case depuis l'app : l'écran est remonté (cases vides, fenêtres fermées).
-        await montrer(page, { remonter: true });
+        // Cases vidées et fenêtres de l'écran refermées par le lecteur lui-même (03/11/2026 : refaire l'écran pour les
+        // vider montrait un instant un écran noir après « Ajouter »).
+        const noms = Array.isArray(r.vider) ? r.vider : [];
+        for (const nom of noms) delete saisies[nom];
+        vue?.mettreAJour({ ...valeurs(), resetInputs: { names: noms, closePopups: true, times: ++vidages } });
       } else {
         rafraichir();
       }

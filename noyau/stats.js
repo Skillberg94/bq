@@ -2,11 +2,11 @@
 // Règle générale : « dépense » = sortie d'argent non supprimée, hors retrait au distributeur (l'argent change de poche,
 // il n'est pas dépensé). Les entrées d'argent ne sont jamais des dépenses.
 
-import { lister } from './donnees.js?v=eafe534f6553';
-import { normaliserLibelle } from './categories.js?v=eafe534f6553';
-import { bornes, depensesPeriode, seuilPour } from './seuils.js?v=eafe534f6553';
-import { ajouterJours, ajouterMois, moisDe } from './dates.js?v=eafe534f6553';
-import { effective, estRetrait } from './soldes.js?v=eafe534f6553';
+import { lister } from './donnees.js?v=afc1385028cb';
+import { normaliserLibelle } from './categories.js?v=afc1385028cb';
+import { bornes, depensesPeriode, seuilPour } from './seuils.js?v=afc1385028cb';
+import { ajouterJours, ajouterMois, moisDe } from './dates.js?v=afc1385028cb';
+import { effective, estRetrait } from './soldes.js?v=afc1385028cb';
 
 const estDepense = (l) => !l.supprime && l.sens === 'sortie' && !l.retrait;
 
