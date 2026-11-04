@@ -6,21 +6,21 @@
 // rappel, saisies (texte des cases), dernier (dernière case tapée), valeurs (envoi d'une ligne touchée), ... }.
 // effet : ce que la page du navigateur doit faire elle-même (synchro, fichier, mot de passe…).
 
-import { lister, supprimer as supprimerLigne, modifier, nomAffiche, remettre, supprimerDefinitivement, corbeille } from './donnees.js?v=37dffcf5cbd6';
+import { lister, supprimer as supprimerLigne, modifier, nomAffiche, remettre, supprimerDefinitivement, corbeille } from './donnees.js?v=5d34ecf52a0d';
 const modifierLigne = modifier;
-import { soldes } from './soldes.js?v=37dffcf5cbd6';
-import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=37dffcf5cbd6';
-import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle, ENTREES, nomEntrees, modifierEntrees } from './categories.js?v=37dffcf5cbd6';
-import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=37dffcf5cbd6';
-import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=37dffcf5cbd6';
-import { attentes, estEnAttente } from './attentes.js?v=37dffcf5cbd6';
-import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=37dffcf5cbd6';
-import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=37dffcf5cbd6';
-import { ajouterRegle, supprimerRegle } from './regles.js?v=37dffcf5cbd6';
-import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenus, revenusDuMois, ajouterRevenu, modifierRevenu, supprimerRevenu, entreesRetenues } from './reglages.js?v=37dffcf5cbd6';
-import { enEuros, enCentimes } from './montants.js?v=37dffcf5cbd6';
-import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=37dffcf5cbd6';
-import { valeursAccueil, ajouterDepense, periodeSuivante, avantSoldeDepart, MENTION_AVANT } from './contrat-accueil.js?v=37dffcf5cbd6';
+import { soldes } from './soldes.js?v=5d34ecf52a0d';
+import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=5d34ecf52a0d';
+import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle, ENTREES, nomEntrees, modifierEntrees } from './categories.js?v=5d34ecf52a0d';
+import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=5d34ecf52a0d';
+import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=5d34ecf52a0d';
+import { attentes, estEnAttente } from './attentes.js?v=5d34ecf52a0d';
+import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=5d34ecf52a0d';
+import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=5d34ecf52a0d';
+import { ajouterRegle, supprimerRegle } from './regles.js?v=5d34ecf52a0d';
+import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenus, revenusDuMois, ajouterRevenu, modifierRevenu, supprimerRevenu, entreesRetenues } from './reglages.js?v=5d34ecf52a0d';
+import { enEuros, enCentimes } from './montants.js?v=5d34ecf52a0d';
+import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=5d34ecf52a0d';
+import { valeursAccueil, ajouterDepense, periodeSuivante, avantSoldeDepart, MENTION_AVANT } from './contrat-accueil.js?v=5d34ecf52a0d';
 
 export const PAGES = ['accueil', 'operations', 'categories', 'recurrents', 'seuils', 'objectifs', 'statistiques', 'soldes', 'sauvegarde', 'reglages'];
 
@@ -145,7 +145,9 @@ function vOperations(etat, ui, ctx) {
     // cadre », seulement depuis Catégories) : la liste « operations-recentes » de l'écran, qui part du haut avec la plus
     // récente en haut ; l'autre liste, au même endroit, reste vide (et inversement). Les deux reçoivent les lignes du
     // plus ancien au plus récent : c'est l'écran qui met la plus récente du côté choisi.
-    ...((ops) => (u.depuisCategorie ? { operations: [], 'operations-recentes': ops } : { operations: ops, 'operations-recentes': [] }))(lignes.reverse().map((l) => ligneOperation(etat, l))),
+    // 04/11/2026 (demande du propriétaire) : toujours ainsi dans Opérations, plus seulement depuis Catégories (l'accueil
+    // garde l'ordre inverse : plus récente en bas).
+    operations: [], 'operations-recentes': lignes.reverse().map((l) => ligneOperation(etat, l)),
     // Fenêtre « Changer la catégorie » (fenêtre de détail) : toutes les catégories, nouvelles comprises.
     'choix-categories': etat.categories.map((c) => ({ id: c.id, nom: c.nom, icone: iconeCategorie(etat, c.id) })),
   } };
@@ -247,7 +249,8 @@ function vRecurrents(etat, ui, ctx) {
   const e = economieDuMois(etat, a);
   const apercu = apercuFrais(etat, a);
   const fin = bornes('mois', a).fin;
-  const aVenir = apercu.filter((f) => f.prochain && f.prochain <= fin);
+  // Un frais sans date connue (jamais vu passer) compte à venir ce mois-ci (comme dans resteAPrevoir).
+  const aVenir = apercu.filter((f) => !f.prochain || f.prochain <= fin);
   const apres = soldeApresFraisAVenir(etat, a);
   const dans7 = ajouterJours(a, 7);
   const parCat = new Map();
@@ -265,10 +268,12 @@ function vRecurrents(etat, ui, ctx) {
       const f = apercu.find((x) => x.id === r.id);
       return {
         id: r.id, nom: r.nom, montant: euros(r.centimes), periodicite: periodiciteTexte(r.periodicite),
-        dernier: f.dernierDebit ? dateLongue(f.dernierDebit) : 'pas encore vu', prochain: f.prochain ? dateLongue(f.prochain) + (f.enRetard ? ' (en retard)' : '') : 'pas encore estimable',
+        dernier: f.dernierDebit ? dateLongue(f.dernierDebit) : 'pas encore vu', prochain: f.prochain ? dateLongue(f.prochain) + (f.enRetard ? ' (en retard)' : '') : 'ce mois-ci (date pas encore connue)',
         bientot: ouiNon(f.prochain && f.prochain >= a && f.prochain <= dans7), categorie: nomCat(etat, r.categorie),
         icone: r.categorie ? iconeCategorie(etat, r.categorie) : 'forfait', unite: r.periodicite.unite,
-        'frais-nom': r.nom, 'frais-montant': euros(r.centimes).replace(' €', ''), // « 29,90 » : pas de calcul dans cette case, écrit à la française 'frais-pas': String(r.periodicite.pas), 'frais-libelle': r.libelles[0] ?? '',
+        // Montant « 29,90 » : pas de calcul dans cette case, écrit à la française. (04/11/2026 : ce commentaire était en fin de
+        // ligne et cachait « tous les » et le libellé à suivre : la fenêtre les montrait vides, et un nouvel enregistrement les effaçait.)
+        'frais-nom': r.nom, 'frais-montant': euros(r.centimes).replace(' €', ''), 'frais-pas': String(r.periodicite.pas), 'frais-libelle': r.libelles[0] ?? '',
       };
     }),
     'par-categorie': [...parCat.entries()].map(([id, g]) => ({ id: id ?? 'a-classer', nom: id ? nomCat(etat, id) : 'Sans catégorie', icone: id ? iconeCategorie(etat, id) : 'forfait', total: euros(g.total), nombre: String(g.nombre) })), // l'écran écrit « {total} / mois » et « {nombre} frais »

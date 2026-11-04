@@ -8,8 +8,8 @@
 // État : recurrents: [{ id, nom, centimes, categorie, libelles: [libellés de banque normalisés],
 //          periodicite: { unite: 'mois'|'semaines', pas: entier ≥ 1, jour?: 1-31 (mois), reference?: 'AAAA-MM-JJ' (date connue d'un prélèvement) } }]
 
-import { effective, soldes } from './soldes.js?v=37dffcf5cbd6';
-import { normaliserLibelle } from './libelles.js?v=37dffcf5cbd6';
+import { effective, soldes } from './soldes.js?v=5d34ecf52a0d';
+import { normaliserLibelle } from './libelles.js?v=5d34ecf52a0d';
 
 const pad = (n) => String(n).padStart(2, '0');
 const enDate = (s) => new Date(Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))));
@@ -164,8 +164,10 @@ export function resteAPrevoir(etat, aujourdhui) {
   let total = 0;
   for (const r of etat.recurrents) {
     const p = prochainEstime(etat, r, aujourdhui);
-    if (!p) continue;
-    let d = p.date;
+    // Frais jamais vu passer (ni jour réglé) : sa date n'est pas connue, il est compté à venir dès aujourd'hui (04/11/2026,
+    // remarque du propriétaire : « le solde après ces frais ne déduit pas les frais à venir du mois » ; ses frais n'avaient
+    // encore aucun prélèvement reconnu et comptaient pour 0).
+    let d = p ? p.date : aujourdhui;
     for (let i = 0; d <= fin && i < 100; i++) {
       total += r.centimes;
       d = suivant(r.periodicite, d);

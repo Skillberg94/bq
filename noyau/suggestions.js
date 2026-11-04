@@ -5,9 +5,9 @@
 // 27-29 jours (4 semaines), sur au moins les deux tiers des écarts.
 // État : suggestionsIgnorees: [libellés normalisés]
 
-import { lister } from './donnees.js?v=37dffcf5cbd6';
-import { normaliserLibelle } from './libelles.js?v=37dffcf5cbd6';
-import { enDate } from './dates.js?v=37dffcf5cbd6';
+import { lister } from './donnees.js?v=5d34ecf52a0d';
+import { normaliserLibelle } from './libelles.js?v=5d34ecf52a0d';
+import { enDate } from './dates.js?v=5d34ecf52a0d';
 
 export const VUES_MIN = 3;
 export const ignorees = (etat) => etat.suggestionsIgnorees ?? [];
