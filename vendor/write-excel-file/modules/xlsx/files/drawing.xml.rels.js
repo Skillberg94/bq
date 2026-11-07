@@ -1,0 +1,22 @@
+import getAdditionalContent from '../helpers/features/getAdditionalContent.js';
+import transformContent from '../helpers/features/transformContent.js';
+export default function generateDrawingXmlRels(_ref) {
+  var sheetIndex = _ref.sheetIndex,
+    sheetId = _ref.sheetId,
+    sheetOptions = _ref.sheetOptions,
+    features = _ref.features;
+  var xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+  // Apply any plugins that insert additional content to this XML.
+  getAdditionalContent('xl/drawings/_rels/drawing{id}.xml.rels', features, sheetOptions, {
+    sheetIndex: sheetIndex,
+    sheetId: sheetId
+  }) + '</Relationships>';
+
+  // Apply any plugins that transform this XML.
+  xml = transformContent(xml, 'xl/drawings/_rels/drawing{id}.xml.rels', features, sheetOptions, {
+    sheetIndex: sheetIndex,
+    sheetId: sheetId
+  });
+  return xml;
+}
+//# sourceMappingURL=drawing.xml.rels.js.map

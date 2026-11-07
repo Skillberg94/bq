@@ -1,0 +1,56 @@
+{
+  "formatVersion": 3,
+  "name": "Écran de test du lecteur BQ",
+  "formats": ["20:9"],
+  "editor": {
+    "grids": [
+      { "name": "Principale", "visible": true, "spacingX": 10, "spacingY": 10 },
+      { "name": "Fine", "visible": false, "spacingX": 5, "spacingY": 5 }
+    ],
+    "centerLines": { "vertical": true, "horizontal": true }
+  },
+  "screens": [
+    {
+      "id": "test",
+      "name": "Test du lecteur",
+      "background": "#101418",
+      "backgroundImage": null,
+      "outerBackgroundImage": null,
+      "children": ["titre", "jauge-test", "bouton-test"],
+      "elements": {
+        "titre": {
+          "type": "text", "parent": null, "children": [], "description": "",
+          "runs": [{ "text": "Lecteur Tool Design : OK" }],
+          "style": { "font": "Inter", "size": 6, "color": "#F4F4F6", "weight": 700, "italic": false, "underline": false, "strikethrough": false, "shadow": null, "lineHeight": 120, "letterSpacing": 0, "align": "center", "verticalAlign": "middle" },
+          "fit": "auto", "minSize": 2
+        },
+        "jauge-test": {
+          "type": "gauge", "parent": null, "children": [], "description": "Jauge reliée à l'app (gaugeValues.jauge-test)",
+          "name": "jauge-test", "testValue": 40, "gaugeKind": "horizontal", "reverse": false,
+          "fill": "#2A2A33", "radius": 50, "image": null, "fillColor": "#E9B949", "thickness": 12, "startAngle": 0,
+          "roundCaps": true, "fitParent": false, "animation": { "duration": 1.2, "easing": "ease-out" }
+        },
+        "bouton-test": {
+          "type": "button", "parent": null, "children": ["texte-bouton"], "description": "Envoie l'action « test-action » à l'app",
+          "sizing": "fixed", "fill": "#2A6DF4", "radius": 40, "image": null,
+          "action": "test-action", "fitParent": false, "shapeFromImage": false,
+          "states": { "pressed": { "scale": 97, "brightness": 85 } }
+        },
+        "texte-bouton": {
+          "type": "text", "parent": "bouton-test", "children": [], "description": "",
+          "runs": [{ "text": "Envoyer une action" }],
+          "style": { "font": "Inter", "size": 4.5, "color": "#FFFFFF", "weight": 600, "italic": false, "underline": false, "strikethrough": false, "shadow": null, "lineHeight": 120, "letterSpacing": 0, "align": "center", "verticalAlign": "middle" },
+          "fit": "auto", "minSize": 2
+        }
+      },
+      "layouts": {
+        "20:9": {
+          "titre": { "x": { "anchor": "center", "offset": 0 }, "y": { "anchor": "top", "offset": 12 }, "width": 90, "height": 10, "aspectRatio": null, "visible": true },
+          "jauge-test": { "x": { "anchor": "center", "offset": 0 }, "y": { "anchor": "middle", "offset": 0 }, "width": 80, "height": 3, "aspectRatio": null, "visible": true },
+          "bouton-test": { "x": { "anchor": "center", "offset": 0 }, "y": { "anchor": "bottom", "offset": -15 }, "width": 70, "height": 9, "aspectRatio": null, "visible": true },
+          "texte-bouton": { "x": { "anchor": "center", "offset": 0 }, "y": { "anchor": "middle", "offset": 0 }, "width": 100, "height": 100, "aspectRatio": null, "visible": true }
+        }
+      }
+    }
+  ]
+}

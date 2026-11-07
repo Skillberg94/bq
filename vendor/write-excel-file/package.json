@@ -1,0 +1,86 @@
+{
+  "name": "write-excel-file",
+  "version": "4.1.1",
+  "description": "Write simple `*.xlsx` files in a browser or Node.js",
+  "type": "module",
+  "exports": {
+    "./node": {
+      "types": "./node/index.d.ts",
+      "import": "./node/index.js",
+      "require": "./node/index.cjs"
+    },
+    "./browser": {
+      "types": "./browser/index.d.ts",
+      "import": "./browser/index.js",
+      "require": "./browser/index.cjs"
+    },
+    "./universal": {
+      "types": "./universal/index.d.ts",
+      "import": "./universal/index.js",
+      "require": "./universal/index.cjs"
+    },
+    "./utility": {
+      "types": "./utility/index.d.ts",
+      "import": "./utility/index.js",
+      "require": "./utility/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "test": "mocha --bail \"source/**/*.test.js\" \"test/*.test.js\" \"test/!(exports)/**/*.test.js\"",
+    "test:exports": "mocha --bail \"test/exports/**/*.test.js\"",
+    "test-coverage": "istanbul cover -x \"commonjs/**\" -x \"modules/**\" -x \"*.test.js\" node_modules/mocha/bin/_mocha -- --compilers js:babel-core/register --colors --reporter dot --require ./test/setup.js \"./{,!(node_modules|commonjs|modules)/**/}*.test.js\" --recursive",
+    "test-travis": "istanbul cover -x \"commonjs/**\" -x \"modules/**\" -x \"*.test.js\" node_modules/mocha/bin/_mocha --report lcovonly -- --compilers js:babel-core/register --colors --reporter spec --require ./test/setup.js \"./{,!(node_modules|commonjs|modules)/**/}*.test.js\" --recursive",
+    "build:clean": "rimraf ./commonjs ./modules",
+    "build:commonjs": "npm-run-all build:commonjs:modules build:commonjs:package.json",
+    "build:commonjs:package.json": "node build-scripts/create-commonjs-package-json.js",
+    "build:commonjs:modules": "cross-env BABEL_ENV=commonjs babel ./source --out-dir ./commonjs --source-maps",
+    "build:esm": "cross-env BABEL_ENV=esm babel ./source --out-dir ./modules --source-maps",
+    "build:bundle": "rollup --config rollup.config.mjs",
+    "build": "npm-run-all build:clean build:commonjs build:esm build:bundle",
+    "prepublishOnly": "npm-run-all build test test:exports"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.28.3",
+    "@babel/core": "^7.28.4",
+    "@babel/plugin-transform-for-of": "^7.27.1",
+    "@babel/plugin-transform-runtime": "^7.28.3",
+    "@babel/preset-env": "^7.28.3",
+    "@babel/runtime": "^7.28.4",
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-terser": "^0.4.4",
+    "chai": "^5.2.0",
+    "core-js": "^3.40.0",
+    "cross-env": "^7.0.3",
+    "mocha": "^11.1.0",
+    "npm-run-all": "^4.1.5",
+    "regenerator-runtime": "^0.14.1",
+    "rimraf": "^6.0.1",
+    "rollup": "^4.34.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/catamphetamine/write-excel-file"
+  },
+  "keywords": [
+    "excel",
+    "xlsx",
+    "browser",
+    "json"
+  ],
+  "author": "catamphetamine <purecatamphetamine@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://gitlab.com/catamphetamine/write-excel-file/issues"
+  },
+  "homepage": "https://gitlab.com/catamphetamine/write-excel-file#readme"
+}
