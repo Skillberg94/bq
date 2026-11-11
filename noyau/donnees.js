@@ -4,22 +4,22 @@
 // État : {
 //   version: 1,
 //   reference: { banque?: {centimes, ts}, especes?: {centimes, ts} },
-//   operations: [{ id, source: 'mail'|'manuel', compte: 'banque'|'especes', sens: 'sortie'|'entree',
+//   operations: [{ id, source: 'mail'|'notification'|'manuel', compte: 'banque'|'especes', sens: 'sortie'|'entree',
 //                  libelle, date: 'AAAA-MM-JJ', centimes (>0), ts (ms) }],
 //   ajouts: { [id]: { emetteurReel?, description?, categorie?, retrait?, supprime?, corrige?: {libelle?, date?, centimes?, sens?, compte?} } }
 //     // à côté de l'opération d'origine (jamais modifiée pour une ligne de mail)
 // }
 // ts = moment où l'opération touche le solde : date d'arrivée du mail (internalDate de Gmail) ou moment de la saisie.
 
-import { compteDansSolde, effective, estRetrait, retraitCompte, soldes } from './soldes.js?v=b9eea6c08f0e';
-import { categoriesParDefaut, categorieDe } from './categories.js?v=b9eea6c08f0e';
-import { recurrentDe } from './recurrents.js?v=b9eea6c08f0e';
+import { compteDansSolde, effective, estRetrait, retraitCompte, soldes } from './soldes.js?v=b8764cdcfa19';
+import { categoriesParDefaut, categorieDe } from './categories.js?v=b8764cdcfa19';
+import { recurrentDe } from './recurrents.js?v=b8764cdcfa19';
 
 export { soldes };
 
 export const CLE_STOCKAGE = 'banque-donnees-v1';
 const CHAMPS_AJOUTS = ['emetteurReel', 'description', 'categorie'];
-const CHAMPS_MANUEL = ['libelle', 'date', 'centimes', 'sens', 'compte', 'preleve'];
+const CHAMPS_MANUEL = ['libelle', 'date', 'centimes', 'sens', 'compte', 'preleve', 'prelevement'];
 
 // Règle de départ, d'après les vrais libellés de la banque (« RETRAIT D'ESPECES CB CASH SERVICES », « … LA BANQUE POSTA »,
 // « … AEROPORT DE PAR », 02/11/2026). Le propriétaire peut la supprimer ou en ajouter d'autres.
@@ -60,7 +60,7 @@ export function fusionnerMails(etat, nouvelles) {
   const ajoutees = [];
   for (const m of nouvelles) {
     if (connus.has(m.id)) continue;
-    const op = { id: m.id, source: 'mail', compte: 'banque', sens: m.sens, libelle: m.libelle, date: m.date, centimes: m.centimes, ts: m.ts, ...(m.objet && { objet: m.objet }) };
+    const op = { id: m.id, source: m.source ?? 'mail', compte: 'banque', sens: m.sens, libelle: m.libelle, date: m.date, centimes: m.centimes, ts: m.ts, ...(m.objet && { objet: m.objet }) };
     verifierOperation(op);
     connus.add(m.id);
     ajoutees.push(op);
@@ -70,8 +70,9 @@ export function fusionnerMails(etat, nouvelles) {
 
 /** Saisie à la main : dépense en espèces, ou dépense banque (case cochée) si la liaison mail a un problème. */
 // preleve : dépense par carte déjà prélevée par la banque, saisie faute de mail (pas « en attente »).
-export function ajouterManuel(etat, { compte, sens = 'sortie', libelle, date, centimes, ts, preleve }) {
-  const op = { id: 'm-' + ts + '-' + etat.operations.length, source: 'manuel', compte, sens, libelle, date, centimes, ts, ...(preleve && { preleve: true }) };
+// prelevement (11/11/2026) : prélèvement bancaire saisi faute de mail (toujours déjà débité : preleve aussi).
+export function ajouterManuel(etat, { compte, sens = 'sortie', libelle, date, centimes, ts, preleve, prelevement }) {
+  const op = { id: 'm-' + ts + '-' + etat.operations.length, source: 'manuel', compte, sens, libelle, date, centimes, ts, ...((preleve || prelevement) && { preleve: true }), ...(prelevement && { prelevement: true }) };
   verifierOperation(op);
   return { etat: { ...etat, operations: etat.operations.concat([op]) }, id: op.id };
 }

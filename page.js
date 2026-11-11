@@ -1,22 +1,22 @@
 // Page de test : état du téléphone, mémoire, connexion Gmail, export.
-import { tableaux } from './noyau/tableaux.js?v=b9eea6c08f0e';
-import { enCsv } from './noyau/csv.js?v=b9eea6c08f0e';
-import { feuillesXlsx } from './noyau/xlsx.js?v=b9eea6c08f0e';
-import { etatDeTest } from './donnees-test.js?v=b9eea6c08f0e';
-import { charger, definirReference, soldes, lister, ajouterManuel, CLE_STOCKAGE } from './noyau/donnees.js?v=b9eea6c08f0e';
-import { jauge, definirSeuilMois } from './noyau/seuils.js?v=b9eea6c08f0e';
-import { dateLocale } from './noyau/dates.js?v=b9eea6c08f0e';
-import { coffreExiste, lireEntete, ouvrirCoffre, lireCoffre, ecrireCoffre, installerCoffre, verifierMotDePasse, changerMotDePasse } from './noyau/coffre.js?v=b9eea6c08f0e';
-import { lireCle, rangerCle, effacerCle, lireCleEcrans, rangerCleEcrans, effacerCleEcrans } from './porte-cles.js?v=b9eea6c08f0e';
-import { cleEcrans, cleValide } from './noyau/ecrans-chiffres.js?v=b9eea6c08f0e';
+import { tableaux } from './noyau/tableaux.js?v=b8764cdcfa19';
+import { enCsv } from './noyau/csv.js?v=b8764cdcfa19';
+import { feuillesXlsx } from './noyau/xlsx.js?v=b8764cdcfa19';
+import { etatDeTest } from './donnees-test.js?v=b8764cdcfa19';
+import { charger, definirReference, soldes, lister, ajouterManuel, CLE_STOCKAGE } from './noyau/donnees.js?v=b8764cdcfa19';
+import { jauge, definirSeuilMois } from './noyau/seuils.js?v=b8764cdcfa19';
+import { dateLocale } from './noyau/dates.js?v=b8764cdcfa19';
+import { coffreExiste, lireEntete, ouvrirCoffre, lireCoffre, ecrireCoffre, installerCoffre, verifierMotDePasse, changerMotDePasse } from './noyau/coffre.js?v=b8764cdcfa19';
+import { lireCle, rangerCle, effacerCle, lireCleEcrans, rangerCleEcrans, effacerCleEcrans } from './porte-cles.js?v=b8764cdcfa19';
+import { cleEcrans, cleValide } from './noyau/ecrans-chiffres.js?v=b8764cdcfa19';
 import {
   creerSauvegarde, nomDeFichier, lireSauvegarde, ouvrirSauvegarde, restaurer, restaurationAnnulable, annulerRestauration, rappelSauvegarde,
-} from './noyau/sauvegarde.js?v=b9eea6c08f0e';
-import { synchroniser, apresTsPour, LIMITE } from './noyau/synchro.js?v=b9eea6c08f0e';
-import { enCentimes, enEuros } from './noyau/montants.js?v=b9eea6c08f0e';
-import { aClasser } from './noyau/categories.js?v=b9eea6c08f0e';
-import { rappelJours } from './noyau/reglages.js?v=b9eea6c08f0e';
-import { demarrerEcrans, demanderMotDePasse as demanderMdpEcran, demanderConfirmation } from './ecrans.js?v=b9eea6c08f0e';
+} from './noyau/sauvegarde.js?v=b8764cdcfa19';
+import { synchroniser, apresTsPour, LIMITE } from './noyau/synchro.js?v=b8764cdcfa19';
+import { enCentimes, enEuros } from './noyau/montants.js?v=b8764cdcfa19';
+import { aClasser } from './noyau/categories.js?v=b8764cdcfa19';
+import { rappelJours } from './noyau/reglages.js?v=b8764cdcfa19';
+import { demarrerEcrans, demanderMotDePasse as demanderMdpEcran, demanderConfirmation } from './ecrans.js?v=b8764cdcfa19';
 
 window.BQ_DEMARRE = true; // tous les modules sont chargés (voir la sécurité du chargement dans index.html)
 window.BQ_NOTER?.('modules chargés');
@@ -478,13 +478,18 @@ async function synchroAuto(forcer = false) {
     const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ cle, max: LIMITE, apresTs: apresTsPour(contenu.etat) }) });
     const rep = await r.json();
     if (rep.erreur) throw new Error(rep.erreur);
-    const res = synchroniser(contenu.etat, rep.messages, { lire: lireMessage, extraire: Extraction.extraireOperation, maintenant: Date.now() });
+    const res = synchroniser(contenu.etat, rep.messages ?? [], {
+      lire: lireMessage, extraire: Extraction.extraireOperation, maintenant: Date.now(),
+      // Notifications Banxo déposées par l'iPhone (11/11/2026) ; un ancien pont n'en rend pas.
+      notifications: rep.notifications ?? [], extraireNotification: Extraction.extraireNotification, dateDe: dateLocale,
+    });
     contenu.etat = res.etat;
     await enregistrer();
     afficherComptes();
     const p = res.rapport;
     let texte = 'Synchro de ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + ' : ' + p.ajoutees.length + ' nouvelle(s) opération(s)';
     if (p.ignorees.length) texte += ', ' + p.ignorees.length + ' ignorée(s)';
+    if (p.nonReconnues) texte += ', ' + p.nonReconnues + ' notification(s) de la banque pas encore reconnue(s), gardée(s) pour plus tard';
     if (p.erreurs.length) texte += ', ' + p.erreurs.length + ' illisible(s), relue(s) à la prochaine synchro';
     if (p.alertes.length) texte += ', ' + p.alertes.length + ' à vérifier (signe du montant)';
     if (p.validees?.length) texte += ', ' + p.validees.length + (p.validees.length > 1 ? ' paiements CB en attente validés' : ' paiement CB en attente validé');
@@ -694,7 +699,7 @@ async function lancerEcrans() {
 // ?donnees-essai, sur l'ordinateur seulement (localhost) : remplace les données par des données inventées.
 const parametres = new URLSearchParams(location.search);
 if (parametres.has('donnees-essai') && ['localhost', '127.0.0.1'].includes(location.hostname)) {
-  const { etatEssai } = await import('./donnees-essai.js?v=b9eea6c08f0e');
+  const { etatEssai } = await import('./donnees-essai.js?v=b8764cdcfa19');
   contenu.etat = etatEssai(dateLocale(Date.now()));
   await enregistrer();
   history.replaceState(null, '', location.pathname);

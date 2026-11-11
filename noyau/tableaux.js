@@ -2,12 +2,12 @@
 // Les cellules sont des valeurs simples ou des cellules typées, que csv.js et xlsx.js savent écrire :
 //   texte | nombre | null | { t: 'montant', v: centimes } | { t: 'date', v: 'AAAA-MM-JJ' } | { t: 'dateheure', v: ms }
 
-import { lister } from './donnees.js?v=b9eea6c08f0e';
-import { soldes } from './soldes.js?v=b9eea6c08f0e';
-import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir } from './recurrents.js?v=b9eea6c08f0e';
-import { jauge } from './seuils.js?v=b9eea6c08f0e';
-import { normaliserLibelle } from './categories.js?v=b9eea6c08f0e';
-import { dateLocale, moisDe, ajouterMois } from './dates.js?v=b9eea6c08f0e';
+import { lister } from './donnees.js?v=b8764cdcfa19';
+import { soldes } from './soldes.js?v=b8764cdcfa19';
+import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir } from './recurrents.js?v=b8764cdcfa19';
+import { jauge } from './seuils.js?v=b8764cdcfa19';
+import { normaliserLibelle } from './categories.js?v=b8764cdcfa19';
+import { dateLocale, moisDe, ajouterMois } from './dates.js?v=b8764cdcfa19';
 
 const M = (v) => (v === null || v === undefined ? null : { t: 'montant', v });
 const D = (v) => (v ? { t: 'date', v } : null);
@@ -35,7 +35,7 @@ export function tableaux(etat, aujourdhui) {
     lignes: tout.map((l) => [
       D(l.date), l.compte === 'banque' ? 'Banque' : 'Espèces', l.sens === 'sortie' ? 'Dépense' : 'Entrée', l.libelle, l.emetteurReel ?? '', l.description ?? '',
       l.sens === 'sortie' ? nomCat(l.categorie) : '', M(l.centimes), M(l.sens === 'sortie' ? -l.centimes : l.centimes),
-      l.source === 'mail' ? 'Mail' : 'Saisie', etat.recurrents.find((r) => r.id === l.recurrentId)?.nom ?? '',
+      l.source === 'mail' ? 'Mail' : l.source === 'notification' ? 'Notification' : 'Saisie', etat.recurrents.find((r) => r.id === l.recurrentId)?.nom ?? '',
       oui(l.retrait), oui(l.corrigee), oui(l.supprime), oui(l.comptee), H(l.ts),
     ]),
   };

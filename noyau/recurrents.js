@@ -8,8 +8,8 @@
 // État : recurrents: [{ id, nom, centimes, categorie, libelles: [libellés de banque normalisés],
 //          periodicite: { unite: 'mois'|'semaines', pas: entier ≥ 1, jour?: 1-31 (mois), reference?: 'AAAA-MM-JJ' (date connue d'un prélèvement) } }]
 
-import { effective, soldes } from './soldes.js?v=b9eea6c08f0e';
-import { normaliserLibelle } from './libelles.js?v=b9eea6c08f0e';
+import { effective, soldes } from './soldes.js?v=b8764cdcfa19';
+import { normaliserLibelle } from './libelles.js?v=b8764cdcfa19';
 
 const pad = (n) => String(n).padStart(2, '0');
 const enDate = (s) => new Date(Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))));
@@ -82,6 +82,18 @@ export function lierLigne(etat, idLigne, idRecurrent) {
   if (!etat.operations.some((o) => o.id === idLigne)) throw new Error('opération introuvable : ' + idLigne);
   if (idRecurrent !== null && !etat.recurrents.some((r) => r.id === idRecurrent)) throw new Error('frais récurrent introuvable : ' + idRecurrent);
   return { ...etat, ajouts: { ...etat.ajouts, [idLigne]: { ...(etat.ajouts[idLigne] ?? {}), recurrentId: idRecurrent } } };
+}
+
+/** Frais récurrent d'un prélèvement saisi à la main (11/11/2026) : seulement si le montant ET le nom correspondent (un
+ *  prélèvement n'est pas forcément un frais récurrent : propriétaire, 11/11/2026). Sinon null : rien n'est lié. */
+export function recurrentPourPrelevement(etat, { centimes, libelle }) {
+  const texte = normaliserLibelle(libelle ?? '');
+  if (!texte) return null;
+  const trouves = etat.recurrents.filter((r) => {
+    const nom = normaliserLibelle(r.nom);
+    return r.centimes === centimes && nom && (texte.includes(nom) || nom.includes(texte));
+  });
+  return trouves.length === 1 ? trouves[0].id : null;
 }
 
 /** Frais récurrent auquel appartient une ligne (id) ou null. Choix manuel d'abord, sinon libellé de la banque connu. */

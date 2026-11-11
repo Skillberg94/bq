@@ -4,12 +4,13 @@
 // - actions : ce que l'app fait quand l'écran lui envoie une action (ajouter-depense, basculer-banque, changer-periode).
 // Aucun calcul de placement ici : l'écran (Tool Design) décide de tout l'affichage.
 
-import { soldes, lister, ajouterManuel, nomAffiche } from './donnees.js?v=b9eea6c08f0e';
-import { jauge } from './seuils.js?v=b9eea6c08f0e';
-import { aClasser, iconeCategorie } from './categories.js?v=b9eea6c08f0e';
-import { attentes, estEnAttente } from './attentes.js?v=b9eea6c08f0e';
-import { revenusDuMois } from './reglages.js?v=b9eea6c08f0e';
-import { enEuros, enCentimes } from './montants.js?v=b9eea6c08f0e';
+import { soldes, lister, ajouterManuel, nomAffiche } from './donnees.js?v=b8764cdcfa19';
+import { jauge } from './seuils.js?v=b8764cdcfa19';
+import { aClasser, iconeCategorie } from './categories.js?v=b8764cdcfa19';
+import { attentes, estEnAttente } from './attentes.js?v=b8764cdcfa19';
+import { revenusDuMois } from './reglages.js?v=b8764cdcfa19';
+import { lierLigne, recurrentPourPrelevement } from './recurrents.js?v=b8764cdcfa19';
+import { enEuros, enCentimes } from './montants.js?v=b8764cdcfa19';
 
 // Ligne qui ne compte pas dans le solde parce qu'elle est d'avant le solde de référence (déjà incluse dans le solde
 // recopié de la banque) : la date le dit (03/11/2026, terme choisi par le propriétaire).
@@ -37,7 +38,7 @@ function nomCategorie(etat, l) {
 
 /**
  * Valeurs envoyées à l'écran d'accueil.
- * ui : { periode, aujourdhui ('AAAA-MM-JJ'), saisieMode ('especes' | 'attente' | 'preleve'), saisieMessage, synchro, rappel }
+ * ui : { periode, aujourdhui ('AAAA-MM-JJ'), saisieMode ('especes' | 'attente' | 'preleve' | 'prelevement'), saisieMessage, synchro, rappel }
  * Rend { linkVariables, gaugeValues } (noms exacts de DesignView / du lecteur).
  */
 export function valeursAccueil(etat, ui) {
@@ -95,7 +96,8 @@ export function valeursAccueil(etat, ui) {
 /**
  * Action « ajouter-depense » : saisies = { 'saisie-montant', 'saisie-description' } (texte tapé dans l'écran).
  * mode (03/11/2026, choix du propriétaire) : « especes » (retirée des espèces), « attente » (CB pas encore prélevée :
- * banque, en attente du prélèvement), « preleve » (CB déjà prélevée mais sans mail : banque, pas en attente).
+ * banque, en attente du prélèvement), « preleve » (CB déjà prélevée mais sans mail : banque, pas en attente),
+ * « prelevement » (11/11/2026 : prélèvement bancaire sans mail ; lié au frais récurrent du même montant s'il est connu).
  * (banque: true = « attente », comme avant.)
  * Rend { etat, message, erreur (nom de la case en erreur, ou null), vider (vrai : vider les cases) }.
  */
@@ -114,8 +116,26 @@ export function ajouterDepense(etat, saisies, { mode, banque, maintenant, aujour
   const r = ajouterManuel(etat, {
     compte: surBanque ? 'banque' : 'especes', sens: 'sortie',
     libelle: description || (surBanque ? 'Dépense banque' : 'Dépense en espèces'),
-    date: aujourdhui, centimes, ts: maintenant, ...(choix === 'preleve' && { preleve: true }),
+    date: aujourdhui, centimes, ts: maintenant, ...(choix === 'preleve' && { preleve: true }), ...(choix === 'prelevement' && { prelevement: true }),
   });
-  const quoi = { especes: ' (espèces)', attente: ' (CB en attente)', preleve: ' (CB prélevée)' }[choix];
-  return { etat: r.etat, message: 'Ajouté : ' + enEuros(-centimes) + quoi, erreur: null, vider: true };
+  let e = r.etat;
+  let lie = null;
+  if (choix === 'prelevement') {
+    lie = recurrentPourPrelevement(e, { centimes, libelle: description });
+    if (lie) e = lierLigne(e, r.id, lie);
+  }
+  const quoi = { especes: ' (espèces)', attente: ' (CB en attente)', preleve: ' (CB prélevée)', prelevement: ' (prélèvement)' }[choix];
+  const frais = lie ? ' — frais récurrent « ' + e.recurrents.find((x) => x.id === lie).nom + ' »' : '';
+  return { etat: e, message: 'Ajouté : ' + enEuros(-centimes) + quoi + frais, erreur: null, vider: true };
+}
+
+/**
+ * Prélèvement choisi dans la liste des frais récurrents (11/11/2026) : une ligne à son nom, à son montant, aujourd'hui,
+ * déjà débitée et liée à ce frais. Le montant se corrige ensuite dans « Modifier » si le prélèvement a changé.
+ */
+export function ajouterPrelevementRecurrent(etat, idRecurrent, { maintenant, aujourdhui }) {
+  const frais = etat.recurrents.find((x) => x.id === idRecurrent);
+  if (!frais) throw new Error('Frais récurrent introuvable.');
+  const r = ajouterManuel(etat, { compte: 'banque', sens: 'sortie', libelle: frais.nom, date: aujourdhui, centimes: frais.centimes, ts: maintenant, prelevement: true });
+  return { etat: lierLigne(r.etat, r.id, frais.id), message: 'Ajouté : ' + enEuros(-frais.centimes) + ' (prélèvement « ' + frais.nom + ' »)' };
 }

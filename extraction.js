@@ -44,6 +44,25 @@
     return op;
   }
 
+  // Notification Banxo de l'iPhone (11/11/2026), déposée au pont par Raccourcis : « L'opération LIBELLÉ de -12,34€ vient d'être
+  // débitée du compte de … ». n = { id, titre, texte, date (AAAA-MM-JJ : jour de réception) } -> même forme qu'un mail.
+  const NOTIF = new RegExp("L['\u2019]op[ée]ration\\s+(.+?)\\s+de\\s+" + MONTANT + "\\s+vient\\s+d['\u2019][êe]tre\\s+(d[ée]bit[ée]e|cr[ée]dit[ée]e)", 'is');
+  function extraireNotification(n) {
+    const objet = n.titre || '';
+    const trouve = NOTIF.exec(nettoyer(n.texte || ''));
+    if (!trouve) return { id: n.id, objet, ignore: 'notification non reconnue' };
+    const libelle = nettoyer(trouve[1]);
+    const centimes = Math.round(parseFloat(trouve[3].replace(/[^\d,]/g, '').replace(',', '.')) * 100);
+    const sensMot = /^d/i.test(trouve[4]) ? 'sortie' : 'entree';
+    const sensObjet = sensDeObjet(objet);
+    const signe = trouve[2] === '' ? null : trouve[2] === '+' ? 'entree' : 'sortie';
+    const sens = sensObjet ?? sensMot;
+    const op = { id: n.id, objet, ignore: null, sens, libelle, date: n.date, centimes };
+    if ((signe && signe !== sens) || sensMot !== sens) op.alerte = 'le signe du montant et le titre de la notification ne concordent pas';
+    if (IGNORES.some((re) => re.test(libelle))) op.ignore = 'virement entre mes comptes';
+    return op;
+  }
+
   // Anti-doublon : on ne garde que les opérations dont l'identifiant de mail n'est pas déjà connu.
   function fusionner(existantes, nouvelles) {
     const connus = new Set(existantes.map((o) => o.id));
@@ -67,7 +86,7 @@
     return new TextDecoder('utf-8').decode(octets);
   }
 
-  const api = { extraireOperation, fusionner, decoderCorps };
+  const api = { extraireOperation, extraireNotification, fusionner, decoderCorps };
   if (typeof module !== 'undefined') module.exports = api;
   else racine.Extraction = api;
 })(typeof window !== 'undefined' ? window : globalThis);

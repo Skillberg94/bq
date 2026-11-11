@@ -7,11 +7,11 @@
 // État : corrections: [{ id, compte, ts, ancien (centimes ou null), nouveau }], libellesIgnores: [{ id, texte }],
 //        reglages: { rappelJours?: number | null }
 
-import { definirReference, soldes } from './donnees.js?v=b9eea6c08f0e';
-import { normaliserLibelle } from './libelles.js?v=b9eea6c08f0e';
-import { ajouterMois, joursDuMois, moisDe } from './dates.js?v=b9eea6c08f0e';
-import { effective } from './soldes.js?v=b9eea6c08f0e';
-import { RAPPEL_JOURS } from './sauvegarde.js?v=b9eea6c08f0e';
+import { definirReference, soldes } from './donnees.js?v=b8764cdcfa19';
+import { normaliserLibelle } from './libelles.js?v=b8764cdcfa19';
+import { ajouterMois, joursDuMois, moisDe } from './dates.js?v=b8764cdcfa19';
+import { effective } from './soldes.js?v=b8764cdcfa19';
+import { RAPPEL_JOURS } from './sauvegarde.js?v=b8764cdcfa19';
 
 export const IGNORES_DEPART = [{ id: 'i-cpt-depot', texte: 'VIR VERS CPT DEPOT PART' }, { id: 'i-livret-a', texte: 'VIR VERS LIVRET A' }];
 export const RAPPELS = [3, 7, 14, 30, null];
@@ -37,7 +37,7 @@ export function ajouterIgnore(etat, texte) {
   const ajouts = { ...etat.ajouts };
   for (const brute of etat.operations) {
     const a = ajouts[brute.id] ?? {};
-    if (brute.source !== 'mail' || a.supprime || !contient(effective(etat, brute).libelle, t)) continue;
+    if ((brute.source !== 'mail' && brute.source !== 'notification') || a.supprime || !contient(effective(etat, brute).libelle, t)) continue;
     ajouts[brute.id] = { ...a, supprime: true, ignorePar: id };
   }
   return { ...etat, ajouts, libellesIgnores: liste.concat([{ id, texte: t }]) };

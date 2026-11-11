@@ -1,7 +1,7 @@
 // Données INVENTÉES pour tester l'export sur le téléphone. Rien ici ne vient de vraies opérations.
-import { vide, definirReference, fusionnerMails, ajouterManuel, modifier } from './noyau/donnees.js?v=b9eea6c08f0e';
-import { classerEmetteur } from './noyau/categories.js?v=b9eea6c08f0e';
-import { definirSeuilMois } from './noyau/seuils.js?v=b9eea6c08f0e';
+import { vide, definirReference, fusionnerMails, ajouterManuel, modifier } from './noyau/donnees.js?v=b8764cdcfa19';
+import { classerEmetteur } from './noyau/categories.js?v=b8764cdcfa19';
+import { definirSeuilMois } from './noyau/seuils.js?v=b8764cdcfa19';
 
 const midi = (date) => Date.parse(date + 'T12:00:00Z');
 const mail = (id, centimes, libelle, date, sens = 'sortie') => ({ id, sens, centimes, libelle, date, ts: midi(date) });

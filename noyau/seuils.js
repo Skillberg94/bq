@@ -7,9 +7,9 @@
 //     pas les frais récurrents (ils sont distincts du seuil), pas les lignes supprimées.
 // État : seuils: { moisCentimes: number | null }
 
-import { effective, estRetrait } from './soldes.js?v=b9eea6c08f0e';
-import { recurrentDe } from './recurrents.js?v=b9eea6c08f0e';
-import { categorieDe } from './categories.js?v=b9eea6c08f0e';
+import { effective, estRetrait } from './soldes.js?v=b8764cdcfa19';
+import { recurrentDe } from './recurrents.js?v=b8764cdcfa19';
+import { categorieDe } from './categories.js?v=b8764cdcfa19';
 
 const pad = (n) => String(n).padStart(2, '0');
 const enDate = (s) => new Date(Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))));

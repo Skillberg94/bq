@@ -6,21 +6,22 @@
 // rappel, saisies (texte des cases), dernier (dernière case tapée), valeurs (envoi d'une ligne touchée), ... }.
 // effet : ce que la page du navigateur doit faire elle-même (synchro, fichier, mot de passe…).
 
-import { lister, supprimer as supprimerLigne, modifier, nomAffiche, remettre, supprimerDefinitivement, corbeille } from './donnees.js?v=b9eea6c08f0e';
+import { lister, supprimer as supprimerLigne, modifier, nomAffiche, remettre, supprimerDefinitivement, corbeille } from './donnees.js?v=b8764cdcfa19';
 const modifierLigne = modifier;
-import { soldes } from './soldes.js?v=b9eea6c08f0e';
-import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=b9eea6c08f0e';
-import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle, ENTREES, nomEntrees, modifierEntrees } from './categories.js?v=b9eea6c08f0e';
-import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne } from './recurrents.js?v=b9eea6c08f0e';
-import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=b9eea6c08f0e';
-import { attentes, estEnAttente } from './attentes.js?v=b9eea6c08f0e';
-import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=b9eea6c08f0e';
-import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=b9eea6c08f0e';
-import { ajouterRegle, supprimerRegle } from './regles.js?v=b9eea6c08f0e';
-import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenus, revenusDuMois, ajouterRevenu, modifierRevenu, supprimerRevenu, entreesRetenues } from './reglages.js?v=b9eea6c08f0e';
-import { enEuros, enCentimes } from './montants.js?v=b9eea6c08f0e';
-import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=b9eea6c08f0e';
-import { valeursAccueil, ajouterDepense, periodeSuivante, avantSoldeDepart, MENTION_AVANT } from './contrat-accueil.js?v=b9eea6c08f0e';
+import { soldes } from './soldes.js?v=b8764cdcfa19';
+import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=b8764cdcfa19';
+import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle, ENTREES, nomEntrees, modifierEntrees } from './categories.js?v=b8764cdcfa19';
+import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne, recurrentDe } from './recurrents.js?v=b8764cdcfa19';
+import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=b8764cdcfa19';
+import { attentes, estEnAttente } from './attentes.js?v=b8764cdcfa19';
+import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=b8764cdcfa19';
+import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=b8764cdcfa19';
+import { ajouterRegle, supprimerRegle } from './regles.js?v=b8764cdcfa19';
+import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenus, revenusDuMois, ajouterRevenu, modifierRevenu, supprimerRevenu, entreesRetenues } from './reglages.js?v=b8764cdcfa19';
+import { enEuros, enCentimes } from './montants.js?v=b8764cdcfa19';
+import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=b8764cdcfa19';
+import { valeursAccueil, ajouterDepense, ajouterPrelevementRecurrent, periodeSuivante, avantSoldeDepart, MENTION_AVANT } from './contrat-accueil.js?v=b8764cdcfa19';
+import { lierLigne, recurrentPourPrelevement } from './recurrents.js?v=b8764cdcfa19';
 
 export const PAGES = ['accueil', 'operations', 'categories', 'recurrents', 'seuils', 'objectifs', 'statistiques', 'soldes', 'sauvegarde', 'reglages'];
 
@@ -120,11 +121,20 @@ function ligneOperation(etat, l) {
     description: l.description || '—', // ligne « Description » de la fiche (ce que le propriétaire écrit dans Modifier)
     objet: l.objet || (l.source === 'manuel' ? 'Saisie à la main' : '—'),
     compte: l.compte === 'especes' ? 'Espèces' : 'Banque',
-    // Statut d'une CB saisie à la main : le toucher dans la fiche le change (basculer-statut). Les autres : —.
-    statut: estCbAMain(l) ? (l.preleve ? 'CB prélevée' : 'CB en attente') : '—',
+    // Statut d'une dépense banque saisie à la main : le toucher dans la fiche le change (basculer-statut). Les autres : —.
+    statut: estCbAMain(l) ? STATUTS[statutDe(l)] : '—',
   };
 }
+// Statut montré par la fiche ouverte (11/11/2026) : lu en direct par l'écran, il change dès qu'on le touche, fiche ouverte.
+// Nom du bouton « Récurrent » de la fiche ouverte (11/11/2026) : il bascule.
+const boutonRecurrent = (etat, id) => { const l = id && lister(etat).find((x) => x.id === id); return l && l.recurrentId ? 'Pas récurrent' : 'Récurrent'; };
+const statutFiche = (etat, id) => { const l = id && lister(etat).find((x) => x.id === id); return l ? ligneOperation(etat, l).statut : '—'; };
 const estCbAMain = (l) => l.source === 'manuel' && l.compte === 'banque' && l.sens === 'sortie' && !l.retrait;
+// Trois statuts, dans l'ordre où le toucher les fait passer (11/11/2026, demande du propriétaire).
+// Premier choix de la fenêtre « Quel prélèvement ? » (11/11/2026, demande du propriétaire) : un prélèvement qui n'est pas un frais récurrent.
+const PRELEVEMENT_UNIQUE = 'prelevement-unique';
+const STATUTS = { attente: 'CB en attente', preleve: 'CB prélevée', prelevement: 'Prélèvement' };
+const statutDe = (l) => (l.prelevement ? 'prelevement' : l.preleve ? 'preleve' : 'attente');
 
 // =====================================================================================================================
 // Valeurs envoyées à chaque écran
@@ -154,6 +164,8 @@ function vOperations(etat, ui, ctx) {
     operations: [], 'operations-recentes': lignes.reverse().map((l) => ligneOperation(etat, l)),
     // Fenêtre « Changer la catégorie » (fenêtre de détail) : toutes les catégories, nouvelles comprises.
     'choix-categories': etat.categories.map((c) => ({ id: c.id, nom: c.nom, icone: iconeCategorie(etat, c.id) })),
+    'statut-fiche': statutFiche(etat, u.touchee),
+    'recurrent-bouton': boutonRecurrent(etat, u.touchee),
   } };
 }
 
@@ -487,6 +499,10 @@ function vAccueil(etat, ui, ctx) {
   const parId = new Map(lister(etat).map((l) => [l.id, l]));
   v.linkVariables.operations = v.linkVariables.operations.map((ligne) => ({ ...ligneOperation(etat, parId.get(ligne.id)), date: ligne.date }));
   v.linkVariables['choix-categories'] = etat.categories.map((c) => ({ id: c.id, nom: c.nom, icone: iconeCategorie(etat, c.id) }));
+  // Frais récurrents proposés par le bouton « Prélèvement » (11/11/2026).
+  v.linkVariables['statut-fiche'] = statutFiche(etat, ui.accueil.touchee);
+  v.linkVariables['recurrent-bouton'] = boutonRecurrent(etat, ui.accueil.touchee);
+  v.linkVariables['choix-prelevements'] = [{ id: PRELEVEMENT_UNIQUE, nom: 'Prélèvement unique', montant: 'Saisir le montant ›' }, ...etat.recurrents.map((x) => ({ id: x.id, nom: x.nom, montant: enEuros(-x.centimes) }))];
   return v;
 }
 
@@ -632,9 +648,19 @@ function aOperations(etat, ui, action, ctx) {
   if (action === 'rendre-recurrent' && id) {
     const l = lister(etat).find((x) => x.id === id);
     if (!l || l.sens !== 'sortie') throw new Error('Seule une dépense peut devenir un frais récurrent.');
-    if (l.recurrentId) throw new Error('Cette dépense est déjà un frais récurrent (page Frais récurrents).');
+    if (l.recurrentId) {
+      // « Pas récurrent » (11/11/2026) : la ligne quitte son frais (null : la reconnaissance par libellé ne la reprend pas) et
+      // recompte dans le seuil ; le frais est supprimé s'il n'a plus aucune ligne (créé par erreur, par exemple).
+      const frais = etat.recurrents.find((x) => x.id === l.recurrentId);
+      let e = lierLigne(etat, id, null);
+      const autres = e.operations.some((o) => !e.ajouts[o.id]?.supprime && recurrentDe(e, o) === l.recurrentId);
+      if (frais && !autres) e = supprimerRecurrent(e, frais.id);
+      const nom = frais ? frais.nom : nomAffiche(l);
+      return { etat: e, message: nomAffiche(l) + ' : plus récurrent' + (frais && !autres ? ' (frais « ' + nom + ' » supprimé, il n\'avait plus de ligne)' : ' (le frais « ' + nom + ' » reste pour ses autres lignes)') + '. Elle compte de nouveau dans le seuil.' };
+    }
     const r = creerDepuisLigne(etat, id, { nom: nomAffiche(l), categorie: l.categorie ?? null });
-    return { etat: r.etat, message: 'Frais récurrent créé : ' + (nomAffiche(l)) + ' (page Frais récurrents pour le régler). Il ne compte plus dans le seuil.' };
+    // Lien posé à la main : il prime sur un ancien « pas récurrent » de cette ligne.
+    return { etat: lierLigne(r.etat, id, r.id), message: 'Frais récurrent créé : ' + (nomAffiche(l)) + ' (page Frais récurrents pour le régler). Il ne compte plus dans le seuil.' };
   }
   // Bouton Catégorie du détail : l'écran ouvre la fenêtre « Changer la catégorie » ; la catégorie touchée arrive ici.
   if (action === 'changer-categorie') return {};
@@ -647,10 +673,24 @@ function aOperations(etat, ui, action, ctx) {
   }
   if (action === 'basculer-statut' && id) {
     const l = lister(etat).find((x) => x.id === id);
-    if (!l || !estCbAMain(l)) throw new Error('Seule une CB saisie à la main a un statut (en attente ou prélevée).');
-    const preleve = !l.preleve;
-    // La fiche se referme (ses textes ne se mettent pas à jour tant qu'elle est ouverte) ; le message dit le nouveau statut.
-    return { etat: modifier(etat, id, { preleve }), message: nomAffiche(l) + ' : ' + (preleve ? 'CB prélevée.' : 'CB en attente.'), vider: [] };
+    if (!l || !estCbAMain(l)) throw new Error('Seule une dépense banque saisie à la main a un statut.');
+    // CB en attente → CB prélevée → Prélèvement → CB en attente. La fiche reste ouverte (11/11/2026, demande du propriétaire).
+    const suivant = { attente: 'preleve', preleve: 'prelevement', prelevement: 'attente' }[statutDe(l)];
+    let e = modifier(etat, id, { preleve: suivant !== 'attente', prelevement: suivant === 'prelevement' });
+    let frais = '';
+    if (suivant === 'prelevement') {
+      // Prélèvement : lié au frais récurrent du même montant s'il est connu (ex. un abonnement déjà déclaré).
+      const r = recurrentPourPrelevement(e, { centimes: l.centimes, libelle: nomAffiche(l) });
+      if (r) {
+        e = lierLigne(e, id, r);
+        frais = ' (frais récurrent « ' + e.recurrents.find((x) => x.id === r).nom + ' »)';
+      }
+    } else if (l.prelevement && etat.ajouts[id] && 'recurrentId' in etat.ajouts[id]) {
+      // Plus un prélèvement : le lien posé avec lui est retiré (retour à la reconnaissance habituelle).
+      const { recurrentId: _lien, ...reste } = e.ajouts[id];
+      e = { ...e, ajouts: { ...e.ajouts, [id]: reste } };
+    }
+    return { etat: e, message: nomAffiche(l) + ' : ' + STATUTS[suivant] + frais + '.' };
   }
   if (action === 'modifier-operation') return {}; // l'écran ouvre la fenêtre « Modifier l'opération »
   if (action === 'enregistrer-modification' && id) return modifierDepuisFenetre(etat, id, ctx);
@@ -671,7 +711,15 @@ function aAccueil(etat, ui, action, ctx) {
     return r && { ...r, ui: r.ui ? avec(ui, 'accueil', { compte: r.ui.soldes.compte }) : ui };
   }
   if (action === 'basculer-banque') return { ui: avec(ui, 'accueil', { saisieMode: u.saisieMode === 'attente' ? 'especes' : 'attente' }) };
-  const modes = { 'mode-especes': 'especes', 'mode-attente': 'attente', 'mode-preleve': 'preleve' };
+  const modes = { 'mode-especes': 'especes', 'mode-attente': 'attente', 'mode-preleve': 'preleve', 'mode-prelevement': 'prelevement' };
+  // Prélèvement choisi dans la liste des frais récurrents (fenêtre du bouton « Prélèvement »).
+  // « Prélèvement unique » (en haut de la liste ; pas un frais récurrent) : la fenêtre se ferme, le mode Prélèvement reste, on
+  // tape montant et description puis Ajouter.
+  if (action === 'prelevement-autre' || (action === 'prelevement-choisi' && ctx.valeurs.id === PRELEVEMENT_UNIQUE)) return { ui: avec(ui, 'accueil', { saisieMode: 'prelevement', saisieMessage: 'Prélèvement non récurrent : tape le montant et la description, puis Ajouter.' }) };
+  if (action === 'prelevement-choisi') {
+    const r = ajouterPrelevementRecurrent(etat, ctx.valeurs.id, { maintenant: ctx.maintenant, aujourdhui: ctx.aujourdhui });
+    return { etat: r.etat, ui: avec(ui, 'accueil', { saisieMessage: r.message, saisieMode: 'especes' }) };
+  }
   if (modes[action]) return { ui: avec(ui, 'accueil', { saisieMode: modes[action] }) };
   if (action === 'changer-periode') return { ui: avec(ui, 'accueil', { periode: periodeSuivante(u.periode) }) };
   if (action === 'ajouter-depense') {

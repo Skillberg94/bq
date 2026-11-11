@@ -6,9 +6,9 @@
 // d'abord.
 // Une saisie en attente = dépense saisie à la main sur le compte banque, pas supprimée.
 
-import { lister } from './donnees.js?v=b9eea6c08f0e';
-import { categorieDe } from './categories.js?v=b9eea6c08f0e';
-import { effective } from './soldes.js?v=b9eea6c08f0e';
+import { lister } from './donnees.js?v=b8764cdcfa19';
+import { categorieDe } from './categories.js?v=b8764cdcfa19';
+import { effective } from './soldes.js?v=b8764cdcfa19';
 
 const LIBELLE_PAR_DEFAUT = 'Dépense banque';
 
@@ -28,7 +28,7 @@ export function validerAttentes(etat, idsMails) {
   const libres = attentes(etat);
   for (const id of idsMails) {
     const brute = e.operations.find((o) => o.id === id);
-    if (!brute || brute.source !== 'mail') continue;
+    if (!brute || (brute.source !== 'mail' && brute.source !== 'notification')) continue;
     const op = effective(e, brute);
     if (op.compte !== 'banque' || op.sens !== 'sortie') continue;
     const i = libres.findIndex((a) => a.centimes === op.centimes);
