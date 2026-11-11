@@ -6,9 +6,9 @@
 //     (synchro, fichiers, mot de passe).
 // Les écrans ne sont présents que dans la version d'essai locale (site-essai/, node construire-site.mjs --essai) : sans
 // eux, demarrerEcrans rend null et la page provisoire reste affichée.
-import { valeursEcran, agir, uiDepart, uiPageOuverte, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=b8764cdcfa19';
-import { dateLocale } from './noyau/dates.js?v=b8764cdcfa19';
-import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=b8764cdcfa19';
+import { valeursEcran, agir, uiDepart, uiPageOuverte, casesDeLaLigne, PAGES } from './noyau/ecrans.js?v=deb522bce8bf';
+import { dateLocale } from './noyau/dates.js?v=deb522bce8bf';
+import { dechiffrerOctets } from './noyau/ecrans-chiffres.js?v=deb522bce8bf';
 
 const $ = (id) => document.getElementById(id);
 const VERSION = 'essai local · 3 nov. 2026';

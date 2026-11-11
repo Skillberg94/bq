@@ -6,22 +6,22 @@
 // rappel, saisies (texte des cases), dernier (dernière case tapée), valeurs (envoi d'une ligne touchée), ... }.
 // effet : ce que la page du navigateur doit faire elle-même (synchro, fichier, mot de passe…).
 
-import { lister, supprimer as supprimerLigne, modifier, nomAffiche, remettre, supprimerDefinitivement, corbeille } from './donnees.js?v=b8764cdcfa19';
+import { lister, supprimer as supprimerLigne, modifier, nomAffiche, remettre, supprimerDefinitivement, corbeille } from './donnees.js?v=deb522bce8bf';
 const modifierLigne = modifier;
-import { soldes } from './soldes.js?v=b8764cdcfa19';
-import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=b8764cdcfa19';
-import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle, ENTREES, nomEntrees, modifierEntrees } from './categories.js?v=b8764cdcfa19';
-import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne, recurrentDe } from './recurrents.js?v=b8764cdcfa19';
-import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=b8764cdcfa19';
-import { attentes, estEnAttente } from './attentes.js?v=b8764cdcfa19';
-import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=b8764cdcfa19';
-import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=b8764cdcfa19';
-import { ajouterRegle, supprimerRegle } from './regles.js?v=b8764cdcfa19';
-import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenus, revenusDuMois, ajouterRevenu, modifierRevenu, supprimerRevenu, entreesRetenues } from './reglages.js?v=b8764cdcfa19';
-import { enEuros, enCentimes } from './montants.js?v=b8764cdcfa19';
-import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=b8764cdcfa19';
-import { valeursAccueil, ajouterDepense, ajouterPrelevementRecurrent, periodeSuivante, avantSoldeDepart, MENTION_AVANT } from './contrat-accueil.js?v=b8764cdcfa19';
-import { lierLigne, recurrentPourPrelevement } from './recurrents.js?v=b8764cdcfa19';
+import { soldes } from './soldes.js?v=deb522bce8bf';
+import { bornes, jauge, definirSeuilMois, niveauAlerte, definirAlerte, seuilsCategories, definirSeuilCategorie, depensesCategorie, seuilPour } from './seuils.js?v=deb522bce8bf';
+import { aClasser, classerEmetteur, oublierEmetteur, ajouterCategorie, modifierCategorie, supprimerCategorie, iconeCategorie, normaliserLibelle, ENTREES, nomEntrees, modifierEntrees } from './categories.js?v=deb522bce8bf';
+import { apercuFrais, resteAPrevoir, soldeApresFraisAVenir, ajouterRecurrent, modifierRecurrent, supprimerRecurrent, creerDepuisLigne, recurrentDe } from './recurrents.js?v=deb522bce8bf';
+import { suggestionsFrais, ignorerSuggestion } from './suggestions.js?v=deb522bce8bf';
+import { attentes, estEnAttente } from './attentes.js?v=deb522bce8bf';
+import { objectifsDe, ajouterObjectif, modifierObjectif, supprimerObjectif, bilanDuMois, epargneObjectif, dureeObjectif } from './objectifs.js?v=deb522bce8bf';
+import { depensesParCategorie, depensesParPeriode, evolutionSolde, topEmetteurs, entreesDepensesParMois } from './stats.js?v=deb522bce8bf';
+import { ajouterRegle, supprimerRegle } from './regles.js?v=deb522bce8bf';
+import { correctionsDe, corrigerSolde, libellesIgnores, ajouterIgnore, supprimerIgnore, rappelJours, definirRappel, revenus, revenusDuMois, ajouterRevenu, modifierRevenu, supprimerRevenu, entreesRetenues } from './reglages.js?v=deb522bce8bf';
+import { enEuros, enCentimes } from './montants.js?v=deb522bce8bf';
+import { ajouterJours, ajouterMois, enDate, moisDe, joursDuMois } from './dates.js?v=deb522bce8bf';
+import { valeursAccueil, ajouterDepense, ajouterPrelevementRecurrent, periodeSuivante, avantSoldeDepart, MENTION_AVANT } from './contrat-accueil.js?v=deb522bce8bf';
+import { lierLigne, recurrentPourPrelevement } from './recurrents.js?v=deb522bce8bf';
 
 export const PAGES = ['accueil', 'operations', 'categories', 'recurrents', 'seuils', 'objectifs', 'statistiques', 'soldes', 'sauvegarde', 'reglages'];
 
@@ -502,7 +502,9 @@ function vAccueil(etat, ui, ctx) {
   // Frais récurrents proposés par le bouton « Prélèvement » (11/11/2026).
   v.linkVariables['statut-fiche'] = statutFiche(etat, ui.accueil.touchee);
   v.linkVariables['recurrent-bouton'] = boutonRecurrent(etat, ui.accueil.touchee);
-  v.linkVariables['choix-prelevements'] = [{ id: PRELEVEMENT_UNIQUE, nom: 'Prélèvement unique', montant: 'Saisir le montant ›' }, ...etat.recurrents.map((x) => ({ id: x.id, nom: x.nom, montant: enEuros(-x.centimes) }))];
+  // La liste de l'écran part du haut et se cale en haut à l'ouverture (11/11/2026, demande du propriétaire) : elle montre les
+  // lignes dans l'ordre inverse de la liste reçue, d'où la liste envoyée à l'envers (« Prélèvement unique » en dernier = en haut).
+  v.linkVariables['choix-prelevements'] = [{ id: PRELEVEMENT_UNIQUE, nom: 'Prélèvement unique', montant: 'Saisir le montant ›' }, ...etat.recurrents.map((x) => ({ id: x.id, nom: x.nom, montant: enEuros(-x.centimes) }))].reverse();
   return v;
 }
 
