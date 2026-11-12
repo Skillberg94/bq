@@ -7,10 +7,10 @@
 // Le noyau ne lit pas les mails lui-même : on lui passe `lire` (message -> { id, ts, objet, texte })
 // et `extraire` (l'extraction testée de test-gmail/extraction.js).
 
-import { fusionnerMails } from './donnees.js?v=1e063d13622f';
-import { estIgnore } from './reglages.js?v=1e063d13622f';
-import { validerAttentes } from './attentes.js?v=1e063d13622f';
-import { normaliserLibelle } from './libelles.js?v=1e063d13622f';
+import { fusionnerMails } from './donnees.js?v=9ab47a314fd1';
+import { estIgnore } from './reglages.js?v=9ab47a314fd1';
+import { validerAttentes } from './attentes.js?v=9ab47a314fd1';
+import { normaliserLibelle } from './libelles.js?v=9ab47a314fd1';
 
 // Une même opération venue par mail ET par notification (11/11/2026) : même sens, même montant, même libellé, à un jour près.
 const ECART_JOURS_JUMEAUX = 1;
