@@ -3,9 +3,9 @@
 // Règle : la catégorie d'une ligne = celle choisie sur la ligne, sinon celle retenue pour son libellé.
 // Classer un émetteur reclasse donc aussi ses anciennes lignes (sauf celles où une catégorie a été choisie à la main).
 
-import { effective, estRetrait } from './soldes.js?v=deb522bce8bf';
-import { normaliserLibelle } from './libelles.js?v=deb522bce8bf';
-import { recurrentDe } from './recurrents.js?v=deb522bce8bf';
+import { effective, estRetrait } from './soldes.js?v=1e063d13622f';
+import { normaliserLibelle } from './libelles.js?v=1e063d13622f';
+import { recurrentDe } from './recurrents.js?v=1e063d13622f';
 
 export { normaliserLibelle };
 

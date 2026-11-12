@@ -47,9 +47,25 @@
   // Notification Banxo de l'iPhone (11/11/2026), déposée au pont par Raccourcis : « L'opération LIBELLÉ de -12,34€ vient d'être
   // débitée du compte de … ». n = { id, titre, texte, date (AAAA-MM-JJ : jour de réception) } -> même forme qu'un mail.
   const NOTIF = new RegExp("L['\u2019]op[ée]ration\\s+(.+?)\\s+de\\s+" + MONTANT + "\\s+vient\\s+d['\u2019][êe]tre\\s+(d[ée]bit[ée]e|cr[ée]dit[ée]e)", 'is');
+  // Paiement CB (12/11/2026) : titre = libellé de la banque (« GRDISTRI »), texte = « -17,96€, LUZARCHES » (montant, ville).
+  const PAIEMENT_CB = new RegExp('^' + MONTANT + '\\s*(?:,\\s*(.+))?$', 's');
   function extraireNotification(n) {
     const objet = n.titre || '';
-    const trouve = NOTIF.exec(nettoyer(n.texte || ''));
+    const texte = nettoyer(n.texte || '');
+    // Paiement « autorisé » (pas encore débité) : ignoré (décision du propriétaire, 12/11/2026 : seul le paiement compte, déjà débité).
+    if (/autoris/i.test(objet + ' ' + texte)) return { id: n.id, objet, ignore: 'paiement autorisé (pas encore débité)' };
+    const cb = PAIEMENT_CB.exec(texte);
+    if (cb && nettoyer(objet)) {
+      const libelleCb = nettoyer(objet);
+      const ville = cb[3] ? nettoyer(cb[3]).replace(/\.$/, '') : '';
+      const op = {
+        id: n.id, objet: 'Paiement CB' + (ville ? ' · ' + ville : ''), ignore: null, sens: cb[1] === '+' ? 'entree' : 'sortie',
+        libelle: libelleCb, date: n.date, centimes: Math.round(parseFloat(cb[2].replace(/[^\d,]/g, '').replace(',', '.')) * 100),
+      };
+      if (IGNORES.some((re) => re.test(libelleCb))) op.ignore = 'virement entre mes comptes';
+      return op;
+    }
+    const trouve = NOTIF.exec(texte);
     if (!trouve) return { id: n.id, objet, ignore: 'notification non reconnue' };
     const libelle = nettoyer(trouve[1]);
     const centimes = Math.round(parseFloat(trouve[3].replace(/[^\d,]/g, '').replace(',', '.')) * 100);

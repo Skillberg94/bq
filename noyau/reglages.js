@@ -7,11 +7,11 @@
 // État : corrections: [{ id, compte, ts, ancien (centimes ou null), nouveau }], libellesIgnores: [{ id, texte }],
 //        reglages: { rappelJours?: number | null }
 
-import { definirReference, soldes } from './donnees.js?v=deb522bce8bf';
-import { normaliserLibelle } from './libelles.js?v=deb522bce8bf';
-import { ajouterMois, joursDuMois, moisDe } from './dates.js?v=deb522bce8bf';
-import { effective } from './soldes.js?v=deb522bce8bf';
-import { RAPPEL_JOURS } from './sauvegarde.js?v=deb522bce8bf';
+import { definirReference, soldes } from './donnees.js?v=1e063d13622f';
+import { normaliserLibelle } from './libelles.js?v=1e063d13622f';
+import { ajouterMois, joursDuMois, moisDe } from './dates.js?v=1e063d13622f';
+import { effective } from './soldes.js?v=1e063d13622f';
+import { RAPPEL_JOURS } from './sauvegarde.js?v=1e063d13622f';
 
 export const IGNORES_DEPART = [{ id: 'i-cpt-depot', texte: 'VIR VERS CPT DEPOT PART' }, { id: 'i-livret-a', texte: 'VIR VERS LIVRET A' }];
 export const RAPPELS = [3, 7, 14, 30, null];
@@ -113,18 +113,32 @@ export function montantAttendu(r, mois) {
 }
 const bonMontant = (centimes, attendu) => Math.abs(centimes - attendu) <= attendu * TOLERANCE_REVENU;
 /**
- * Revenus du mois et leur arrivée : chaque revenu prend la première entrée du mois qui lui correspond (une entrée ne sert
- * qu'à un seul revenu). Rend [{ revenu, attendu, recu: ligne | null }].
+ * Revenus du mois et leur arrivée (une entrée ne sert qu'à un seul revenu).
+ * - Repéré au montant : la première entrée du mois au bon montant ; il est arrivé en entier ou pas du tout.
+ * - Repéré aux deux : une entrée au bon montant ET au bon libellé (choix du 03/11/2026).
+ * - Repéré au libellé : les entrées du mois qui portent le libellé s'additionnent (12/11/2026 : un revenu peut
+ *   arriver en plusieurs fois) ; il est arrivé quand une entrée a le bon montant ou que le total l'atteint, sinon il reste
+ *   le reste à recevoir.
+ * Rend [{ revenu, attendu, recu: première ligne | null, recus: [lignes], recuCentimes, reste }].
  */
 export function revenusDuMois(etat, mois, entrees) {
   const prises = new Set();
   return revenus(etat).map((r) => {
     const attendu = montantAttendu(r, mois);
-    const recu = entrees.find((l) => !prises.has(l.id) && moisDe(l.date) === mois
-      && (r.reperage === 'libelle' || bonMontant(l.centimes, attendu))
-      && (r.reperage === 'montant' || contient(l.libelle, r.libelle))) ?? null;
-    if (recu) prises.add(recu.id);
-    return { revenu: r, attendu, recu };
+    const libres = entrees.filter((l) => !prises.has(l.id) && moisDe(l.date) === mois);
+    let recus;
+    if (r.reperage === 'libelle') {
+      recus = libres.filter((x) => contient(x.libelle, r.libelle));
+    } else {
+      // Au montant, ou aux deux (choix du 03/11/2026 : libellé ET bon montant) : une seule entrée, au bon montant.
+      const l = libres.find((x) => bonMontant(x.centimes, attendu) && (r.reperage === 'montant' || contient(x.libelle, r.libelle)));
+      recus = l ? [l] : [];
+    }
+    recus.forEach((l) => prises.add(l.id));
+    const recuCentimes = recus.reduce((s, l) => s + l.centimes, 0);
+    const complet = recus.some((l) => bonMontant(l.centimes, attendu)) || recuCentimes >= attendu - attendu * TOLERANCE_REVENU;
+    const reste = recus.length === 0 ? attendu : complet ? 0 : attendu - recuCentimes;
+    return { revenu: r, attendu, recu: recus[0] ?? null, recus, recuCentimes, reste };
   });
 }
 /**
@@ -132,8 +146,8 @@ export function revenusDuMois(etat, mois, entrees) {
  * Rend { centimes, prevu } (prevu : au moins un revenu compté sans être arrivé).
  */
 export function entreesRetenues(etat, reelles, mois, entrees) {
-  const manquants = revenusDuMois(etat, mois, entrees).filter((x) => !x.recu);
-  return { centimes: reelles + manquants.reduce((s, x) => s + x.attendu, 0), prevu: manquants.length > 0 };
+  const manquants = revenusDuMois(etat, mois, entrees).filter((x) => x.reste > 0);
+  return { centimes: reelles + manquants.reduce((s, x) => s + x.reste, 0), prevu: manquants.length > 0 };
 }
 
 export function definirRappel(etat, jours) {

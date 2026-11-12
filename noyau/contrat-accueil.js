@@ -4,13 +4,13 @@
 // - actions : ce que l'app fait quand l'écran lui envoie une action (ajouter-depense, basculer-banque, changer-periode).
 // Aucun calcul de placement ici : l'écran (Tool Design) décide de tout l'affichage.
 
-import { soldes, lister, ajouterManuel, nomAffiche } from './donnees.js?v=deb522bce8bf';
-import { jauge } from './seuils.js?v=deb522bce8bf';
-import { aClasser, iconeCategorie } from './categories.js?v=deb522bce8bf';
-import { attentes, estEnAttente } from './attentes.js?v=deb522bce8bf';
-import { revenusDuMois } from './reglages.js?v=deb522bce8bf';
-import { lierLigne, recurrentPourPrelevement } from './recurrents.js?v=deb522bce8bf';
-import { enEuros, enCentimes } from './montants.js?v=deb522bce8bf';
+import { soldes, lister, ajouterManuel, nomAffiche } from './donnees.js?v=1e063d13622f';
+import { jauge } from './seuils.js?v=1e063d13622f';
+import { aClasser, iconeCategorie } from './categories.js?v=1e063d13622f';
+import { attentes, estEnAttente } from './attentes.js?v=1e063d13622f';
+import { revenusDuMois } from './reglages.js?v=1e063d13622f';
+import { lierLigne, recurrentPourPrelevement } from './recurrents.js?v=1e063d13622f';
+import { enEuros, enCentimes } from './montants.js?v=1e063d13622f';
 
 // Ligne qui ne compte pas dans le solde parce qu'elle est d'avant le solde de référence (déjà incluse dans le solde
 // recopié de la banque) : la date le dit (03/11/2026, terme choisi par le propriétaire).
@@ -67,7 +67,7 @@ export function valeursAccueil(etat, ui) {
   // Revenus attendus ce mois-ci et pas encore arrivés (Réglages) : dès qu'un arrive, il sort de ce total (son virement
   // est déjà dans le solde).
   const attendu = ui.aujourdhui
-    ? revenusDuMois(etat, ui.aujourdhui.slice(0, 7), lister(etat).filter((l) => !l.supprime && l.sens === 'entree')).filter((x) => !x.recu).reduce((t, x) => t + x.attendu, 0)
+    ? revenusDuMois(etat, ui.aujourdhui.slice(0, 7), lister(etat).filter((l) => !l.supprime && l.sens === 'entree')).reduce((t, x) => t + x.reste, 0)
     : 0;
   return {
     linkVariables: {

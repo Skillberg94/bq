@@ -8,8 +8,8 @@
 // État : recurrents: [{ id, nom, centimes, categorie, libelles: [libellés de banque normalisés],
 //          periodicite: { unite: 'mois'|'semaines', pas: entier ≥ 1, jour?: 1-31 (mois), reference?: 'AAAA-MM-JJ' (date connue d'un prélèvement) } }]
 
-import { effective, soldes } from './soldes.js?v=deb522bce8bf';
-import { normaliserLibelle } from './libelles.js?v=deb522bce8bf';
+import { effective, soldes } from './soldes.js?v=1e063d13622f';
+import { normaliserLibelle } from './libelles.js?v=1e063d13622f';
 
 const pad = (n) => String(n).padStart(2, '0');
 const enDate = (s) => new Date(Date.UTC(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10))));
